@@ -1,6 +1,6 @@
 services:
     postgres:
-        image: postgres:latest
+        image: postgres:17
         container_name: matcom_bench_press_postgres
         environment:
             POSTGRES_USER: ${POSTGRES_USER}
@@ -9,7 +9,7 @@ services:
         ports:
             - "${POSTGRES_PORT}:5432"
         volumes:
-            - postgres_data:/var/lib/postgresql
+            - postgres_data:/var/lib/postgresql/data
         healthcheck:
             test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
             interval: 10s
