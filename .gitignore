@@ -8,6 +8,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+lerna-debug.log*
 
 # Runtime data
 pids
@@ -18,19 +19,27 @@ pids
 # Coverage
 coverage/
 
-# Build outputs
-/dist/
-/build/
-/.cache/
+# Build outputs (Ojo: quitamos el / del inicio para que aplique a todo el proyecto)
+dist/
+dist-ssr/
+build/
+.cache/
 
-# Env files
+# Env files and local config
 .env
 .env.*.local
+*.local
 
 # OS files
 .DS_Store
 Thumbs.db
 
-# VS Code settings
+# Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
