@@ -1,0 +1,43 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {section}{\numberline {1}Análisis de Trade-offs (Arquitectura N-Capas vs. Clean/Onion/Hexagonal)}{3}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Pregunta:}{3}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Error fundamental:}{3}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Alternativa A: Introducción de Regla de Dependencia}{3}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Impacto en la testabilidad}{5}{subsection.1.4}%
+\contentsline {subsection}{\numberline {1.5}Cambiar de base de datos de SQL Server a MongoDB}{6}{subsection.1.5}%
+\contentsline {section}{\numberline {2}Comparación de Estilos: La Simetría del Hexágono vs. la Jerarquía de las Capas}{6}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Pregunta:}{6}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Breve descripción de ambas arquitecturas}{6}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Simetría de la representación hexagonal y el problema conceptual que resuelve (que una representación de capas apiladas no transmite intuitivamente)}{7}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Traducción del concepto de ``Puerto y Adaptador'' en la práctica de definir interfaces en las capas internas de la Arquitectura Onion}{8}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}La razón no es numérica: eliminar la asimetría izquierda-derecha o arriba-abajo}{9}{subsection.2.5}%
+\contentsline {section}{\numberline {3}Aplicación de DDD y Bounded Context en un Dominio Complejo}{9}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Pregunta}{9}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}División del problema en Bounded Contexts}{10}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Evitando la contaminación del modelo ``Póliza''}{10}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Comunicación entre contextos}{11}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Relación con arquitecturas orientadas al dominio y creación de Adaptador de Servicio}{12}{subsection.3.5}%
+\contentsline {section}{\numberline {4}Evaluación de la Inversión de Dependencias en la Práctica}{12}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Pregunta}{12}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Breve introducción a la Inversión de Dependencias y la Regla de Dependencia}{13}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Razón por la cual la dependencia interna viola los principios fundamentales de las arquitecturas Hexagonal, Limpia y Onion}{13}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Dirección que deberían tener las dependencias del código fuente. Razón por la que la implementación actual no la cumple}{14}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Rediseño de la interacción}{14}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}El nuevo diseño permite que la lógica de negocio sea probada de forma aislada.}{15}{subsection.4.6}%
+\contentsline {subsection}{\numberline {4.7}Implicación para la mantenibilidad y capacidad de cambiar el proveedor de validación de direcciones en el futuro}{15}{subsection.4.7}%
+\contentsline {section}{\numberline {5}Análisis de un Problema Real: El ``Kitty Problem'' y el Principio de Abierto/Cerrado}{16}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Pregunta}{16}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Descripción}{16}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}La causa del problema}{18}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Solución usando principios DDD y Arquitectura Onion/Clean}{18}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Principio Abierto/Cerrado y papel de los Adaptadores}{19}{subsection.5.5}%
+\contentsline {section}{\numberline {6}Evaluación de la Arquitectura N-Capas frente a Requisitos de Atributos de Calidad}{19}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Pregunta}{19}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Breve introducción}{19}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Análisis de agilidad, facilidad de despliegue y escalabilidad aplicando estas técnicas}{20}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Impacto de la introducción de capas abiertas en el Principio de Aislamiento de Capas}{21}{subsection.6.4}%
+\contentsline {subsection}{\numberline {6.5}Impacto de la introducción de capas abiertas en la mantenibilidad}{21}{subsection.6.5}%
+\contentsline {subsection}{\numberline {6.6}La relación entre las capas abiertas, el Sinkhole Antipattern y la regla del 80/20}{21}{subsection.6.6}%
+\contentsline {subsection}{\numberline {6.7}Por qué las arquitecturas Hexagonal y Limpia pueden ser más adecuadas para sistemas con requisitos elevados de agilidad y escalabilidad}{22}{subsection.6.7}%
+\contentsline {section}{\numberline {7}Bibliografía}{22}{section.7}%
+\contentsline {section}{\numberline {8}Declaración de uso de IA}{23}{section.8}%
