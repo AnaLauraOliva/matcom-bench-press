@@ -1,5 +1,5 @@
 import express, { json } from 'express'
-import { exercisesRouter } from './interfaces/routes/exercises.ts'
+import { ExercisesRouter } from './interfaces/routes/exercises.ts'
 
 const app = express()
 
@@ -8,7 +8,7 @@ app.use(json())
 
 
 //Routers
-app.use('/exercises', exercisesRouter)
+app.use('/exercises', ExercisesRouter)
 
 
 //

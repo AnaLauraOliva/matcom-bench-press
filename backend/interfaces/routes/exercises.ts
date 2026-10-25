@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { ExerciseController } from '../controllers/exercises'
+import { ExerciseController } from '../controllers/exercises.ts'
 
 export const ExercisesRouter = Router()
 
