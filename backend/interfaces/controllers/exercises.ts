@@ -19,4 +19,16 @@ export class ExerciseController {
     if (exercise) return res.json(exercise)
     return res.status(404).json({ message: 'Exercise not found' })
   }
+
+  static async delete (req : Request<{ id: string }>, res : Response) {
+    const { id } = req.params
+
+    const result = await ExercisesModel.delete({ id })
+
+    if (result === false) {
+      return res.status(404).json({ message: 'Exercise not found' })
+    }
+
+    return res.json({ message: 'Exercise deleted' })
+  }
 }

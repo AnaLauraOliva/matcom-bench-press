@@ -21,4 +21,12 @@ export class ExercisesModel {
 
         return exercise
     }
+
+    static async delete ({ id }: { id: string }) {
+        const exerciseIndex = exercises.findIndex(exercise => exercise.id === id)
+        if (exerciseIndex === -1) return false
+
+        exercises.splice(exerciseIndex, 1)
+        return true
+    }
 }
