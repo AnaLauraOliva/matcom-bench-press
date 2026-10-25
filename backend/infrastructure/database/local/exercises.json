@@ -1,0 +1,12 @@
+[
+    {
+        "id": "1",
+        "name": "bench press",
+        "muscles": ["chest","triceps"]
+    },
+    {
+        "id": "2",
+        "name": "pull ups",
+        "muscles": ["lats","biceps"]        
+    }
+]
