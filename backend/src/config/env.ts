@@ -7,7 +7,7 @@ const schema = z.object({
     JWT_SECRET: z.string().min(32,'JWT_SECRET debe tener al menos 32 caracteres'),
     JWT_EXPIRES_IN_SECONDS: z.coerce.number().int().positive().default(3600),
     BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(15).default(10),
-    //FRONTEND_ORIGIN: z.string().url('FRONTEND_ORIGIN debe ser una URL válida'),
+    FRONTEND_ORIGIN: z.string().url('FRONTEND_ORIGIN debe ser una URL válida'),
 });
 
 const result = schema.safeParse(process.env);

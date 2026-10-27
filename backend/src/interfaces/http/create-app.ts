@@ -6,7 +6,8 @@ import { AuthController } from './controllers/auth-controllers.js';
 import { errorsManager } from './middlewares/errors-manager.js';
 import { createAuthRoutes } from './routes/auth-routes.js';
 import { createOptionaAuthentication } from './middlewares/auth-optional.js';
-//import cors from 'cors';
+import cors from 'cors';
+import { env } from '../../config/env.js'
 
 export interface IHttpDependencies {
     readonly login: Login;
@@ -17,11 +18,11 @@ export interface IHttpDependencies {
 export function createApp (dependencies: IHttpDependencies): Express {
     const app = express();
 
-/*
+
     app.use(cors({
         origin: env.FRONTEND_ORIGIN,
         credentials: true,
-    }));*/
+    }));
     app.use(express.json());
     const controller = new AuthController(
         dependencies.login,
