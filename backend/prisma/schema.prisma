@@ -18,6 +18,7 @@ datasource db {
 enum Sex{
   MASCULINO
   FEMENINO
+  OTRO
 }
 
 //Tabla Sede
