@@ -3,12 +3,80 @@
 
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
+// Voy a usar @map y @@map para poder usar los campos en inglés dentro del código
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../src/infrastructure/database/generated"
   moduleFormat = "esm"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+//Enum con los géneros
+enum Sex{
+  MASCULINO
+  FEMENINO
+}
+
+//Tabla Sede
+
+model Location{
+  idLocation   Int     @id @default(autoincrement()) @map("id_sede")
+  name         String  @unique @map("nombre")
+  address      String  @map("direccion")
+  //Esto es para que prisma sepa que en una sede pueden haber varios clientes
+  clients      Client[]
+  @@map("Sede")
+}
+//Tablas de usuario y sus especializaciones
+model User{
+  idUser         Int      @id @default(autoincrement()) @map("id_usuario")
+    phone        String   @map("telefono")
+    registerDate DateTime @default(now()) @map("fecha_registro")
+    active       Boolean  @default(true) @map("activo")
+    name         String   @map("nombre")
+    email        String   @unique
+    password     String   @map("contrasena")
+
+    client       Client?
+    admin        Admin?
+    trainer      Trainer?
+    //Falta añadir el resto de los roles
+
+    //Agiliza la busqueda por nombre
+    @@index([name])
+    @@map("Usuario")
+}
+
+//Por ahora solo añadiré a los clientes
+model Client{
+  idUser      Int   @id @map("id_usuario")
+  age         Int   @map("edad")
+  sex         Sex   @map("sexo")
+  idLocation  Int   @map("id_sede")
+  user        User  @relation(fields: [idUser],references: [idUser])
+  location    Location @relation(fields: [idLocation], references: [idLocation])
+  @@map("Cliente")
+}
+
+model Admin{
+  idUser      Int   @id @map("id_usuario")
+  user        User  @relation(fields: [idUser],references: [idUser])
+  @@map("Administrador")
+}
+
+model Trainer{
+  idUser      Int   @id @map("id_usuario")
+  specialty   String @map("especialidad")
+  user        User  @relation(fields: [idUser],references: [idUser])
+  headTrainer HeadTrainer?
+  @@map("Entrenador")
+}
+
+model HeadTrainer{
+  idUser      Int   @id @map("id_usuario")
+  trainer     Trainer  @relation(fields: [idUser],references: [idUser])
+  @@map("Jefe_de_sala")
 }
