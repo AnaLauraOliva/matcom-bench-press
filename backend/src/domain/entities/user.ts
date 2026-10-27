@@ -18,13 +18,18 @@ interface IBaseNewUserData {
     readonly email: string;
     readonly passwordHash: string;
 }
-//unión disciminada por roles, por ahora solo cliente
+//unión disciminada por roles
 export type NewUser = 
     | (IBaseNewUserData & {
         readonly role: 'CLIENT';
         readonly age: number;
         readonly sex: Sex;
         readonly locationName: string;
+    })
+    | (IBaseNewUserData &{readonly role: 'ADMIN'})
+    | (IBaseNewUserData &{
+        readonly role: 'TRAINER' | 'HEAD_TRAINER';
+        readonly specialty: string;
     });
 
     

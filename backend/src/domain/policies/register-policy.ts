@@ -6,6 +6,9 @@ import type { Role } from "../entities/role.js";
 const CAN_REGISTER: Readonly<Record<Role | 'ANONYMOUS', readonly Role[]>>={
     ANONYMOUS: ['CLIENT'],
     CLIENT: [],
+    TRAINER: ['CLIENT'],
+    HEAD_TRAINER: ['CLIENT', 'TRAINER'],
+    ADMIN: ['CLIENT','TRAINER','HEAD_TRAINER','ADMIN'],
 };
 
 export class RegisterPolicy {

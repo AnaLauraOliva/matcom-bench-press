@@ -6,6 +6,8 @@ import type { IUser } from "../../../domain/entities/user.js";
 
 export const INCLUDE_ROLE = {
     client: true,
+    admin: true,
+    trainer: {include: {headTrainer: true}}
 } as const;
 
 // Forma m'inima de una fila que devuelve Prisma con INCLUDE_ROLE
@@ -18,11 +20,15 @@ export interface IUserRow {
     registerDate: Date;
     password: string;
     client: object | null;
+    admin: object | null;
+    trainer: {headTrainer: object | null} | null;
 }
 
 // El rol no se guarda como un campo, se deduce de en que tabla de especializaci'on est'a el usuario
 export function delegateRole(row: IUserRow): Role {
     if (row.client) return 'CLIENT';
+    if (row.active) return 'ADMIN';
+    if (row.trainer) return row.trainer.headTrainer ? 'HEAD_TRAINER' : 'TRAINER';
     throw new Error(`El usuario ${row.idUser} no tiene un rol asignado (datos inconsistentes).`);
 }
 

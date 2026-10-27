@@ -18,7 +18,7 @@ interface ICommunData {
     readonly password: string;
 }
 
-//Los datos para registrar un usuario dependen del rol, solo cliente por ahora
+//Los datos para registrar un usuario dependen del rol
 export type RegisterData = ICommunData & 
 (
     | {
@@ -26,6 +26,13 @@ export type RegisterData = ICommunData &
         readonly age: number;
         readonly sex: Sex;
         readonly locationName: string;
+    }
+    | {
+        readonly role: 'ADMIN';
+    }
+    | {
+        readonly role: 'TRAINER' | 'HEAD_TRAINER';
+        readonly specialty: string;
     }
 );
 

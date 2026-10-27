@@ -41,6 +41,8 @@ model User{
     password     String   @map("contrasena")
 
     client       Client?
+    admin        Admin?
+    trainer      Trainer?
     //Falta añadir el resto de los roles
 
     //Agiliza la busqueda por nombre
@@ -57,4 +59,24 @@ model Client{
   user        User  @relation(fields: [idUser],references: [idUser])
   location    Location @relation(fields: [idLocation], references: [idLocation])
   @@map("Cliente")
+}
+
+model Admin{
+  idUser      Int   @id @map("id_usuario")
+  user        User  @relation(fields: [idUser],references: [idUser])
+  @@map("Administrador")
+}
+
+model Trainer{
+  idUser      Int   @id @map("id_usuario")
+  specialty   String @map("especialidad")
+  user        User  @relation(fields: [idUser],references: [idUser])
+  headTrainer HeadTrainer?
+  @@map("Entrenador")
+}
+
+model HeadTrainer{
+  idUser      Int   @id @map("id_usuario")
+  trainer     Trainer  @relation(fields: [idUser],references: [idUser])
+  @@map("Jefe_de_sala")
 }

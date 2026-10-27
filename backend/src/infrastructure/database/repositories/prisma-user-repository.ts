@@ -22,6 +22,16 @@ function roleData (newUser: NewUser) {
                     }
                 } 
             };
+        case 'ADMIN':
+            return { admin: { create: {}}};
+        case 'TRAINER':
+            return { trainer: { create: {specialty: newUser.specialty}}};
+        case 'HEAD_TRAINER':
+            return {
+                trainer: {
+                    create: {specialty: newUser.specialty, headTrainer: { create: {}}}
+                }
+            };
     }
 }
 
