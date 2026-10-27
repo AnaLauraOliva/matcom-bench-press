@@ -2,6 +2,8 @@
 import { extend } from "zod/mini";
 import type { Role } from "../entities/role.js";
 export abstract class DomainError extends Error {
+    abstract readonly code: string;
+    
     constructor(message: string) {
         super(message);
         this.name = new.target.name;
