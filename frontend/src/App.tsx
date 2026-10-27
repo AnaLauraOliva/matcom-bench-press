@@ -1,5 +1,5 @@
 
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, useRef, useEffect } from 'react'
 import {
   Activity,
   ArrowRight,
@@ -13,12 +13,19 @@ import {
 } from 'lucide-react'
 import './App.css'
 
+import axios from 'axios'
+import { login, register } from './api/auth'
+
 type AuthMode = 'login' | 'register'
 
 type AuthForm = {
   name: string
   email: string
+  phone: string
   password: string
+  age: string
+  sex: '' | 'FEMENINO' | 'MASCULINO' | 'OTRO'
+  locationName: string
 }
 
 const features = [
@@ -42,20 +49,201 @@ const features = [
   },
 ]
 
+
+type SelectOption = {
+  value: string
+  label: string
+}
+
+type CustomSelectProps = {
+  value: string
+  options: SelectOption[]
+  placeholder: string
+  onChange: (value: string) => void
+}
+
+function CustomSelect({
+  value,
+  options,
+  placeholder,
+  onChange,
+}: CustomSelectProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const selectedOption = options.find((option) => option.value === value)
+
+  useEffect(() => {
+    function handleOutsideClick(event: PointerEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handleOutsideClick)
+
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsideClick)
+    }
+  }, [])
+
+  function chooseOption(option: SelectOption) {
+    onChange(option.value)
+    setIsOpen(false)
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+
+      if (!isOpen) {
+        setIsOpen(true)
+        const selectedIndex = options.findIndex(
+          (option) => option.value === value,
+        )
+        setActiveIndex(
+          selectedIndex >= 0 ? selectedIndex : 0,
+        )
+        return
+      }
+
+      setActiveIndex((current) => {
+        if (event.key === 'ArrowDown') {
+          return (current + 1) % options.length
+        }
+
+        return (current - 1 + options.length) % options.length
+      })
+    }
+
+    if (event.key === 'Enter' && isOpen) {
+      event.preventDefault()
+      chooseOption(options[activeIndex])
+    }
+
+    if (event.key === 'Escape') {
+      setIsOpen(false)
+    }
+
+    if (event.key === 'Home' && isOpen) {
+      event.preventDefault()
+      setActiveIndex(0)
+    }
+
+    if (event.key === 'End' && isOpen) {
+      event.preventDefault()
+      setActiveIndex(options.length - 1)
+    }
+  }
+
+  return (
+    <div className="custom-select" ref={containerRef}>
+      <button
+        type="button"
+        className={`custom-select-trigger ${isOpen ? 'is-open' : ''}`}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={() => {
+          if (!isOpen) {
+            const selectedIndex = options.findIndex(
+              (option) => option.value === value,
+            )
+            setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0)
+          }
+          setIsOpen((open) => !open)
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        <span className={!selectedOption ? 'custom-select-placeholder' : ''}>
+          {selectedOption?.label ?? placeholder}
+        </span>
+
+        <svg
+          className="custom-select-chevron"
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="custom-select-menu" role="listbox">
+          {options.map((option, index) => (
+            <div
+              key={option.value}
+              id={`custom-option-${option.value}`}
+              role="option"
+              aria-selected={option.value === value}
+              className={[
+                'custom-select-option',
+                option.value === value ? 'is-selected' : '',
+                index === activeIndex ? 'is-active' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onMouseEnter={() => setActiveIndex(index)}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                chooseOption(option)
+              }}
+            >
+              <span>{option.label}</span>
+
+              {option.value === value && (
+                <span className="custom-select-check" aria-hidden="true">
+                  ✓
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
 function App() {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [form, setForm] = useState<AuthForm>({
     name: '',
     email: '',
+    phone: '',
     password: '',
+    age: '',
+    sex: '',
+    locationName: '',
   })
   const [message, setMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   function openAuth(mode: AuthMode) {
     setAuthMode(mode)
-    setForm({ name: '', email: '', password: '' })
+    setForm({
+  name: '',
+  email: '',
+  phone: '',
+  password: '',
+  age: '',
+  sex: '',
+  locationName: '',
+})
     setMessage('')
     setMenuOpen(false)
   }
@@ -65,33 +253,63 @@ function App() {
     setMessage('')
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setMessage('')
-    setIsSubmitting(true)
+async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault()
+  setMessage('')
 
-    try {
-      // TODO: importar la función de registro o inicio de sesión desde
-      // src/api/auth.ts cuando el equipo backend confirme sus rutas.
-      // No se guardan usuarios en la base de datos desde el navegador.
-      // La llamada real se añadirá en el paso de integración con el backend.
-
-      setMessage(
-        'La interfaz está preparada. Falta conectar el backend para validar el acceso y guardar el registro.',
-      )
-    } catch {
-      setMessage(
-        'No se pudo completar la operación. Comprueba la conexión e inténtalo de nuevo.',
-      )
-    } finally {
-      setIsSubmitting(false)
-    }
+  if (authMode === 'register' && !form.sex) {
+    setMessage('Selecciona una opción de género.')
+    return
   }
+  
+  setIsSubmitting(true)
+
+  try {
+    if (authMode === 'login') {
+      const result = await login({
+        email: form.email.trim(),
+        password: form.password,
+      })
+
+      // TODO: guardar el token en el estado de autenticación
+      // e integrar los datos del usuario en la aplicación.
+      console.log('Usuario autenticado:', result.user)
+
+      setMessage('Inicio de sesión correcto.')
+    } else if (authMode === 'register') {
+      await register({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        password: form.password,
+        role: 'CLIENT',
+        age: Number(form.age),
+        sex: form.sex as 'FEMENINO' | 'MASCULINO' | 'OTRO',
+        locationName: form.locationName.trim(),
+      })
+
+      setMessage('Registro completado correctamente.')
+    }
+  } catch (error: unknown) {
+    if (axios.isAxiosError<{
+      error?: { code?: string; message?: string }
+    }>(error)) {
+      setMessage(
+        error.response?.data?.error?.message ??
+          'No se pudo completar la operación. Comprueba los datos y la conexión con el servidor.',
+      )
+    } else {
+      setMessage('Ocurrió un error inesperado.')
+    }
+  } finally {
+    setIsSubmitting(false)
+  }
+}
 
   return (
     <div className="app">
       <header className="site-header">
-        <a className="brand" href="#inicio" aria-label="FitPlan, inicio">
+        <a className="brand" href="#inicio" aria-label="MatCom Bench Press, inicio">
           <span className="brand-icon">
             <Dumbbell size={23} strokeWidth={2.5} />
           </span>
@@ -345,20 +563,142 @@ function App() {
 
             <form className="auth-form" onSubmit={handleSubmit}>
               {authMode === 'register' && (
-                <label>
-                  Nombre completo
-                  <input
-                    type="text"
-                    name="name"
-                    autoComplete="name"
-                    placeholder="Tu nombre"
-                    value={form.name}
-                    onChange={(event) =>
-                      setForm({ ...form, name: event.target.value })
-                    }
-                    required
-                  />
-                </label>
+                <>
+                  <label>
+                    Nombre completo
+                    <input
+                      type="text"
+                      name="name"
+                      autoComplete="name"
+                      value={form.name}
+                      onChange={(event) =>
+                        setForm({ ...form, name: event.target.value })
+                      }
+                      maxLength={100}
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Teléfono
+                    <input
+                      type="tel"
+                      name="phone"
+                      autoComplete="tel"
+                      inputMode="numeric"
+                      value={form.phone}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          phone: event.target.value.replace(/\D/g, ''),
+                        })
+                      }
+                      maxLength={30}
+                      pattern="[0-9]+"
+                      title="Introduce el teléfono usando solo números."
+                      required
+                    />
+                  </label>
+                  
+                  <label>
+                    Edad
+                    <div className="age-control">
+                      <input
+                        className="age-input"
+                        type="number"
+                        name="age"
+                        min={1}
+                        max={120}
+                        step={1}
+                        value={form.age}
+                        onChange={(event) =>
+                          setForm({ ...form, age: event.target.value })
+                        }
+                        required
+                      />
+
+                      <div className="age-buttons">
+                        <button
+                          type="button"
+                          aria-label="Aumentar edad"
+                          title="Aumentar edad"
+                          disabled={Number(form.age) >= 120}
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              age: String(Math.min(120, (Number(form.age) || 0) + 1)),
+                            })
+                          }
+                        >
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                            <path
+                              d="m6 14 6-6 6 6"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+
+                        <button
+                          type="button"
+                          aria-label="Disminuir edad"
+                          title="Disminuir edad"
+                          disabled={form.age !== '' && Number(form.age) <= 1}
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              age: String(Math.max(1, (Number(form.age) || 2) - 1)),
+                            })
+                          }
+                        >
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
+                            <path
+                              d="m6 10 6 6 6-6"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </label>
+                  
+                  <label>
+                    Género
+                    <CustomSelect
+                      value={form.sex}
+                      placeholder="Selecciona una opción"
+                      options={[
+                        { value: 'FEMENINO', label: 'Femenino' },
+                        { value: 'MASCULINO', label: 'Masculino' },
+                        { value: 'OTRO', label: 'Otro' },
+                      ]}
+                      onChange={(value) =>
+                        setForm({
+                          ...form,
+                          sex: value as AuthForm['sex'],
+                        })
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Sede del gimnasio
+                    <input
+                      type="text"
+                      name="locationName"
+                      value={form.locationName}
+                      onChange={(event) =>
+                        setForm({ ...form, locationName: event.target.value })
+                      }
+                      required
+                    />
+                  </label>
+                </>
               )}
 
               <label>
@@ -382,15 +722,23 @@ function App() {
                   type="password"
                   name="password"
                   autoComplete={
-                    authMode === 'register'
-                      ? 'new-password'
-                      : 'current-password'
+                    authMode === 'register' ? 'new-password' : 'current-password'
                   }
-                  placeholder="Al menos 8 caracteres"
-                  minLength={8}
                   value={form.password}
                   onChange={(event) =>
                     setForm({ ...form, password: event.target.value })
+                  }
+                  minLength={8}
+                  maxLength={72}
+                  pattern={
+                    authMode === 'register'
+                      ? '(?=.*[A-Za-z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,72}'
+                      : undefined
+                    }
+                  title={
+                    authMode === 'register'
+                      ? 'Debe tener entre 8 y 72 caracteres, incluyendo una letra, un número y un símbolo.'
+                      : undefined
                   }
                   required
                 />
