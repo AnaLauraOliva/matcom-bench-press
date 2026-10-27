@@ -34,6 +34,6 @@ export const registerScheme = z.discriminatedUnion('role', [
         role: z.literal('CLIENT'),
         age: z.number().int().positive().max(120),
         sex: z.enum(SEXES),
-        locationName: z.string().min(1,'La sede no puede estar vacía'),
+        idLocation: z.int().positive(),
     }),
 ]);

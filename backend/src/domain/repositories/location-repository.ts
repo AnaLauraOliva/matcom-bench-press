@@ -1,3 +1,3 @@
 export interface ILocationRepository {
-    exists(locationName: string): Promise<boolean>;
+    exists(idLocation: number): Promise<boolean>;
 }

@@ -4,10 +4,8 @@ import type { ILocationRepository } from "../../../domain/repositories/location-
 export class PrismaLocationRepository implements ILocationRepository {
     constructor(private readonly prisma: PrismaClient) {}
     
-    async exists(locationName: string): Promise<boolean> {
-        const location = await this.prisma.location.findUnique({
-            where: { name: locationName }
-        });
-        return location !== null;
+    async exists(idLocation: number): Promise<boolean> {
+        const total = await this.prisma.location.count({where: {idLocation: idLocation}})
+        return total > 0;
     }
 }
