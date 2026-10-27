@@ -1,0 +1,34 @@
+import type { Request, Response } from 'express';
+import { ExercisesModel } from '../../infrastructure/models/local/exercises.ts'
+
+export class ExerciseController {
+    
+  static async getAll (req : Request, res: Response) {
+    //fetch all the filters
+    const { muscle } = req.query as { muscle?: string  }
+
+    const exercises = await ExercisesModel.getAll({muscle})
+
+    res.json(exercises)
+  }
+
+  static async getById (req : Request<{ id: string }>, res : Response) {
+    const { id } = req.params
+    const exercise = await ExercisesModel.getById({ id })
+    
+    if (exercise) return res.json(exercise)
+    return res.status(404).json({ message: 'Exercise not found' })
+  }
+
+  static async delete (req : Request<{ id: string }>, res : Response) {
+    const { id } = req.params
+
+    const result = await ExercisesModel.delete({ id })
+
+    if (result === false) {
+      return res.status(404).json({ message: 'Exercise not found' })
+    }
+
+    return res.json({ message: 'Exercise deleted' })
+  }
+}

@@ -3,3 +3,9 @@ GET http://localhost:1234/exercises
 
 ### Get exercises by ID
 GET http://localhost:1234/exercises/2
+
+### Get exercises by muscle
+GET http://localhost:1234/exercises?muscle=chest
+
+### Delete a exercise
+DELETE http://localhost:1234/exercises/1
