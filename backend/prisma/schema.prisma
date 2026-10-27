@@ -16,15 +16,15 @@ datasource db {
 
 //Enum con los géneros
 enum Sex{
-  Masculino
-  Femenino
+  MASCULINO
+  FEMENINO
 }
 
 //Tabla Sede
 
 model Location{
   idLocation   Int     @id @default(autoincrement()) @map("id_sede")
-  name         String  @map("nombre")
+  name         String  @unique @map("nombre")
   address      String  @map("direccion")
   //Esto es para que prisma sepa que en una sede pueden haber varios clientes
   clients      Client[]
