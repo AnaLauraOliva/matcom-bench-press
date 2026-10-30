@@ -25,7 +25,7 @@ export type RegisterData = ICommunData &
         readonly role: 'CLIENT';
         readonly age: number;
         readonly sex: Sex;
-        readonly locationName: string;
+        readonly idLocation: number;
     }
     | {
         readonly role: 'ADMIN';
@@ -62,8 +62,8 @@ export class RegisterUser {
         }
 
         // Comprobaci'on de existencia de la sede
-        if (data.role === 'CLIENT' && !await this.locations.exists(data.locationName)) {
-            throw new LocationNotFoundError(data.locationName);
+        if (data.role === 'CLIENT' && !await this.locations.exists(data.idLocation)) {
+            throw new LocationNotFoundError(data.idLocation);
         }
 
         // Hasheamos y guardamos la contraseña
