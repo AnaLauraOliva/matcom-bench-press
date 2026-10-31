@@ -21,21 +21,28 @@ enum Sex{
   OTRO
 }
 
+enum Type {
+  FUERZA
+  CARDIO
+  FLEXIBILIDAD
+}
+
 //Tabla Sede
 
 model Location{
-  idLocation   Int     @id @default(autoincrement()) @map("id_sede")
-  name         String  @unique @map("nombre")
-  address      String  @map("direccion")
+  idLocation   Int      @id @default(autoincrement()) @map("id_sede")
+  name         String   @unique @map("nombre")
+  address      String   @map("direccion")
   //Esto es para que prisma sepa que en una sede pueden haber varios clientes
   clients      Client[]
+
   @@map("Sede")
 }
 //Tablas de usuario y sus especializaciones
 model User{
   idUser         Int      @id @default(autoincrement()) @map("id_usuario")
     phone        String   @map("telefono")
-    registerDate DateTime @default(now()) @map("fecha_registro")
+    registerDate DateTime @default(now()) @map("fecha_registro") @db.Date
     active       Boolean  @default(true) @map("activo")
     name         String   @map("nombre")
     email        String   @unique
@@ -44,40 +51,284 @@ model User{
     client       Client?
     admin        Admin?
     trainer      Trainer?
-    //Falta añadir el resto de los roles
 
     //Agiliza la busqueda por nombre
     @@index([name])
     @@map("Usuario")
 }
 
-//Por ahora solo añadiré a los clientes
+// Como un cliente pertenece a una y solo una sede, entonces en lugar de hacer una tabla aparte de pertenece cliente sede,
+// se decide añadir el campo id a la tabla de Cliente
 model Client{
-  idUser      Int   @id @map("id_usuario")
-  age         Int   @map("edad")
-  sex         Sex   @map("sexo")
-  idLocation  Int   @map("id_sede")
-  user        User  @relation(fields: [idUser],references: [idUser])
-  location    Location @relation(fields: [idLocation], references: [idLocation])
+  idUser             Int                 @id @map("id_usuario")
+  age                Int                 @map("edad")
+  sex                Sex                 @map("sexo")
+  idLocation         Int                 @map("id_sede")
+  
+  user               User                @relation(fields: [idUser],references: [idUser])
+  location           Location            @relation(fields: [idLocation], references: [idLocation])
+  
+  programEnrollments ProgramEnrollment[]
+  adjustmentRequests AdjustmentRequest[]
+  assignedRoutines   AssignedRoutine[]
+  
   @@map("Cliente")
 }
 
 model Admin{
   idUser      Int   @id @map("id_usuario")
+
   user        User  @relation(fields: [idUser],references: [idUser])
+
   @@map("Administrador")
 }
 
 model Trainer{
-  idUser      Int   @id @map("id_usuario")
-  specialty   String @map("especialidad")
-  user        User  @relation(fields: [idUser],references: [idUser])
-  headTrainer HeadTrainer?
+  idUser                    Int                         @id @map("id_usuario")
+  specialty                 String                      @map("especialidad")
+
+  user                      User                        @relation(fields: [idUser],references: [idUser])
+
+  headTrainer               HeadTrainer?
+  exercises                 Exercise[]
+  routines                  Routine[]
+  generateRoutinePermission GenerateRoutinePermission[]
+  validateRoutinePermission ValidateRoutinePermission[]
+  adjustmentRequests        AdjustmentRequest[]
+  
   @@map("Entrenador")
 }
 
 model HeadTrainer{
-  idUser      Int   @id @map("id_usuario")
-  trainer     Trainer  @relation(fields: [idUser],references: [idUser])
+  idUser      Int               @id @map("id_usuario")
+
+  trainer     Trainer           @relation(fields: [idUser],references: [idUser])
+
+  validations ValidateRoutine[]
+
   @@map("Jefe_de_sala")
+}
+
+model TrainingProgram{
+  idProgram                 Int                         @id @default(autoincrement()) @map("id_programa")
+  name                      String                      @map("nombre")
+  active                    Boolean                     @default(true) @map("activo")
+  objetive                  String                      @map("objetivo")
+  desciption                String                      @map("descripcion")
+
+  generateRoutinePermission GenerateRoutinePermission[]
+  validateRoutinePermission ValidateRoutinePermission[]
+  routineBelongPrograms     RoutineBelongProgram[]
+  programEnrollments        ProgramEnrollment[]
+  programCoversGroups       ProgramCoversGroup[]
+
+  @@map("Programa_de_Entrenamiento")
+}
+
+model GenerateRoutinePermission{
+  idTrainer Int             @map("id_entrenador")
+  idProgram Int             @map("id_programa")
+
+  trainer   Trainer         @relation(fields: [idTrainer], references: [idUser])
+  program   TrainingProgram @relation(fields: [idProgram], references: [idProgram])
+
+  @@id([idTrainer,idProgram])
+  @@map("Puede_Generar_Rutina")
+}
+
+model ValidateRoutinePermission{
+  idTrainer Int             @map("id_entrenador")
+  idProgram Int             @map("id_programa")
+
+  trainer   Trainer         @relation(fields: [idTrainer], references: [idUser])
+  program   TrainingProgram @relation(fields: [idProgram], references: [idProgram])
+
+  @@id([idTrainer,idProgram])
+  @@map("Puede_Validar_Rutina")
+}
+
+model RoutineBelongProgram{
+  idProgram       Int             @map("id_programa")
+  idRoutine       Int             @map("id_rutina")
+
+  trainingProgram TrainingProgram @relation(fields: [idProgram], references: [idProgram])
+  routine         Routine         @relation(fields: [idRoutine], references: [idRoutine])
+
+  @@id([idProgram, idRoutine])
+  @@map("Rutina_Pertenece_Programa")
+}
+
+model Routine{
+  idRoutine            Int                    @id @default(autoincrement()) @map("id_rutina")
+  name                 String                 @map("nombre")
+  date                 DateTime               @map("fecha") @default(now()) @db.Date
+  strength             Decimal                @map("proporcion_fuerza")
+  flexibility          Decimal                @map("proporcion_fexibilidad")
+  cardio               Decimal                @map("proporcion_cardio")
+  exercisesNumber      Int                    @map("cantidad_ejercicios")
+  // Como una rutina puede ser creada por solo un entrenador la relación entrenador genera rutina
+  // se traduce como idCreator en esta tabla
+  idCreator            Int                    @map("id_creador")
+
+  creator              Trainer                @relation(fields: [idCreator], references: [idUser])
+
+  routineBelongProgram RoutineBelongProgram[]
+  validateRoutine      ValidateRoutine?
+  adjustmentRequests   AdjustmentRequest[]
+  includesExercises    IncludesExercise[]
+  assignedRoutines     AssignedRoutine[]
+
+  @@map("Rutina")
+}
+// Como jefe de sala valida rutina tiene más campos se pondrá en una tabla aparte y no dentro de rutina
+
+//Esperando confirmacion de una cosa
+model ValidateRoutine{
+  idValdidator Int         @map("id_validador")
+  idRoutine    Int         @map("id_rutina") @unique  
+  date         DateTime    @map("fecha") @default(now()) @db.Date
+  approved     Boolean     @map("aprobada")
+  observations String      @map("observaciones")
+
+  routine      Routine     @relation(fields: [idRoutine], references: [idRoutine])
+  validator    HeadTrainer @relation(fields: [idValdidator], references: [idUser])
+
+  @@id([idValdidator,idRoutine])
+  @@map("Validar_Rutina")
+}
+
+model Exercise{
+  idExercise                   Int                           @id @default(autoincrement()) @map("id_ejercicio")
+  description                  String                        @map("descripcion") @unique
+  name                         String                        @map("nombre") @unique
+  date                         DateTime                      @map("fecha") @default(now()) @db.Date
+  idCreator                    Int                           @map("id_creador")
+ 
+  creator                      Trainer                       @relation(fields: [idCreator], references: [idUser])
+ 
+  classificationByType         ClassificationByType[]
+  classificationByMuscleGroups ClassificationByMuscleGroup[] 
+  includesExercises            IncludesExercise[]
+
+  @@map("Ejercicio")
+}
+
+model ExerciseType{
+  idType               Int                    @id @default(autoincrement()) @map("id_tipo")
+  name                 Type                   @map("nombre")
+  
+  classificationByType ClassificationByType[]
+
+  @@map("Tipo_Ejercicio")
+}
+
+model ClassificationByType{
+  idExercise Int          @map("id_ejercicio")
+  idType     Int          @map("id_tipo")
+
+  exercise   Exercise     @relation(fields: [idExercise], references: [idExercise])
+  type       ExerciseType @relation(fields: [idType], references: [idType])
+
+  @@id([idExercise,idType])
+  @@map("Clasificacion_por_Tipo")
+}
+
+model ProgramCoversGroup {
+  idProgram Int             @map("id_programa")
+  idGroup   Int             @map("id_grupo")
+  
+  program   TrainingProgram @relation(fields: [idProgram], references: [idProgram])
+  group     MuscleGroup     @relation(fields: [idGroup], references: [idGroup])
+  
+  @@id([idProgram,idGroup])
+  @@map("Programa_Cubre_Grupo")
+}
+
+model ClassificationByMuscleGroup {
+  idExercise Int         @map("id_ejercicio")
+  idGroup    Int         @map("id_grupo")
+  
+  program    Exercise    @relation(fields: [idExercise], references: [idExercise])
+  group      MuscleGroup @relation(fields: [idGroup], references: [idGroup])
+  
+  @@id([idExercise,idGroup])
+  @@map("Clasificacion_por_Grupo_Muscular")
+}
+
+model ProgramEnrollment {
+  idClient         Int             @map("id_cliente")
+  idProgram        Int             @map("id_programa")
+  registrationDate DateTime        @default(now()) @map("fecha_inscripcion") @db.Date
+  state            String          @map("estado")
+
+  client           Client          @relation(fields: [idClient], references: [idUser])
+  program          TrainingProgram @relation(fields: [idProgram], references: [idProgram])
+  
+  @@id([idClient,idProgram])
+  @@map("Inscripcion_Programa")
+}
+
+model MuscleGroup{
+  idGroup                      Int                           @id @map("id_grupo")
+  name                         String                        @map("nombre")
+  
+  programCoversGroups          ProgramCoversGroup[]
+  classificationByMuscleGroups ClassificationByMuscleGroup[]
+
+  @@map("Grupo_Muscular")
+}
+
+model AdjustmentRequest{
+  idClient   Int      @map("id_cliente")
+  idTrainer  Int      @map("id_entrenador")
+  idRoutine  Int      @map("id_rutina")
+  result     String   @map("resultado")
+  state      String   @map("estado")
+  date       DateTime @default(now()) @map("fecha") @db.Date
+
+  client     Client   @relation(fields: [idClient], references: [idUser])
+  trainer    Trainer  @relation(fields: [idTrainer], references: [idUser])
+  routine    Routine  @relation(fields: [idRoutine], references: [idRoutine])
+  
+  @@id([idClient,idTrainer,idRoutine])
+  @@map("Solicitud_Ajuste")
+}
+
+model IncludesExercise{
+  idExercise Int      @map("id_ejercicio")
+  idRoutine  Int      @map("id_rutina")
+  
+  exercise   Exercise @relation(fields: [idExercise], references: [idExercise])
+  routine    Routine  @relation(fields: [idRoutine], references: [idRoutine])
+  
+  @@id([idExercise,idRoutine])
+  @@map("Inlcluye_Ejercicio")
+}
+
+model AssignedRoutine{
+  idClient  Int       @map("id_cliente")
+  idRoutine Int       @map("id_rutina")
+  state     String    @map("estado")
+  
+  client    Client    @relation(fields: [idClient], references: [idUser])
+  routine   Routine   @relation(fields: [idRoutine], references: [idRoutine])
+  
+  sessions  Session[]
+  
+  @@id([idClient, idRoutine])
+  @@map("Rutina_Asignada")
+}
+
+model Session{
+  idSession       Int             @map("id_sesion")
+  observations    String          @map("observaciones")
+  date            DateTime        @db.Date @map("fecha")
+  duration        DateTime        @db.Time() @map("duracion")
+  idRoutine       Int             @map("id_rutina")
+  idClient        Int             @map("id_cliente")
+
+  assignedRoutine AssignedRoutine @relation(fields: [idClient,idRoutine], references: [idClient, idRoutine])
+  
+  @@id([idSession,idClient,idRoutine])
+  @@map("Sesion")
 }
