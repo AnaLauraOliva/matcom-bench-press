@@ -27,7 +27,7 @@ export interface IUserRow {
 // El rol no se guarda como un campo, se deduce de en que tabla de especializaci'on est'a el usuario
 export function delegateRole(row: IUserRow): Role {
     if (row.client) return 'CLIENT';
-    if (row.active) return 'ADMIN';
+    if (row.admin) return 'ADMIN';
     if (row.trainer) return row.trainer.headTrainer ? 'HEAD_TRAINER' : 'TRAINER';
     throw new Error(`El usuario ${row.idUser} no tiene un rol asignado (datos inconsistentes).`);
 }

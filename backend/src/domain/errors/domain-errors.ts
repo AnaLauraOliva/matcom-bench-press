@@ -62,3 +62,19 @@ export class LocationNotFoundError extends DomainError {
         super(`La sede con el ID ${idLocation} no fue encontrada.`);
     }
 }
+
+export class UserNotFoundError extends DomainError{
+    readonly code = 'USER_NOT_FOUND';
+
+    constructor(id: number){
+        super(`No existe el usuario con id ${id}`);
+    }
+}
+
+export class UserAccessDeniedError extends DomainError{
+    readonly code = 'USER_ACCESS_DENIED';
+
+    constructor(actorRole: Role, targetRole: Role){
+        super(`Un ${actorRole} no tiene permiso sobre un usuario con rol ${targetRole}`);
+    }
+}
