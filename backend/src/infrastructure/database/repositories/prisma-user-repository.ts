@@ -18,7 +18,7 @@ function roleData (newUser: NewUser) {
                     create: {
                         age: newUser.age,
                         sex: newUser.sex,
-                        location: {connect: {name: newUser.locationName}}
+                        location: {connect: {idLocation: newUser.idLocation}}
                     }
                 } 
             };

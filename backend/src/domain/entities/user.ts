@@ -24,7 +24,7 @@ export type NewUser =
         readonly role: 'CLIENT';
         readonly age: number;
         readonly sex: Sex;
-        readonly locationName: string;
+        readonly idLocation: number;
     })
     | (IBaseNewUserData &{readonly role: 'ADMIN'})
     | (IBaseNewUserData &{

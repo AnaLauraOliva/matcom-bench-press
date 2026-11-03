@@ -58,7 +58,7 @@ export class EmailAlreadyExistsError extends DomainError {
 
 export class LocationNotFoundError extends DomainError {
     readonly code = 'LOCATION_NOT_FOUND';
-    constructor(locationName: string) {
-        super(`La sede con nombre ${locationName} no fue encontrada.`);
+    constructor(idLocation: number) {
+        super(`La sede con el ID ${idLocation} no fue encontrada.`);
     }
 }
