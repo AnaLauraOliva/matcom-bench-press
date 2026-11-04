@@ -14,8 +14,7 @@ datasource db {
   provider = "postgresql"
 }
 
-//Enum con los géneros
-enum Sex{
+enum Gender{
   MASCULINO
   FEMENINO
   OTRO
@@ -60,12 +59,12 @@ model User{
 // Como un cliente pertenece a una y solo una sede, entonces en lugar de hacer una tabla aparte de pertenece cliente sede,
 // se decide añadir el campo id a la tabla de Cliente
 model Client{
-  idUser             Int                 @id @map("id_usuario")
+  idClient           Int                 @id @map("id_usuario")
   age                Int                 @map("edad")
-  sex                Sex                 @map("sexo")
+  gender             Gender                 @map("sexo")
   idLocation         Int                 @map("id_sede")
   
-  user               User                @relation(fields: [idUser],references: [idUser])
+  user               User                @relation(fields: [idClient],references: [idUser])
   location           Location            @relation(fields: [idLocation], references: [idLocation])
   
   programEnrollments ProgramEnrollment[]
@@ -76,18 +75,18 @@ model Client{
 }
 
 model Admin{
-  idUser      Int   @id @map("id_usuario")
+  idAdmin      Int   @id @map("id_usuario")
 
-  user        User  @relation(fields: [idUser],references: [idUser])
+  user         User  @relation(fields: [idAdmin],references: [idUser])
 
   @@map("Administrador")
 }
 
 model Trainer{
-  idUser                    Int                         @id @map("id_usuario")
+  idTrainer                 Int                         @id @map("id_usuario")
   specialty                 String                      @map("especialidad")
 
-  user                      User                        @relation(fields: [idUser],references: [idUser])
+  user                      User                        @relation(fields: [idTrainer],references: [idUser])
 
   headTrainer               HeadTrainer?
   exercises                 Exercise[]
@@ -100,11 +99,11 @@ model Trainer{
 }
 
 model HeadTrainer{
-  idUser      Int               @id @map("id_usuario")
+  idHeadTrainer      Int               @id @map("id_usuario")
 
-  trainer     Trainer           @relation(fields: [idUser],references: [idUser])
+  trainer            Trainer           @relation(fields: [idHeadTrainer],references: [idTrainer])
 
-  validations ValidateRoutine[]
+  validations        ValidateRoutine[]
 
   @@map("Jefe_de_sala")
 }
@@ -129,7 +128,7 @@ model GenerateRoutinePermission{
   idTrainer Int             @map("id_entrenador")
   idProgram Int             @map("id_programa")
 
-  trainer   Trainer         @relation(fields: [idTrainer], references: [idUser])
+  trainer   Trainer         @relation(fields: [idTrainer], references: [idTrainer])
   program   TrainingProgram @relation(fields: [idProgram], references: [idProgram])
 
   @@id([idTrainer,idProgram])
@@ -140,7 +139,7 @@ model ValidateRoutinePermission{
   idTrainer Int             @map("id_entrenador")
   idProgram Int             @map("id_programa")
 
-  trainer   Trainer         @relation(fields: [idTrainer], references: [idUser])
+  trainer   Trainer         @relation(fields: [idTrainer], references: [idTrainer])
   program   TrainingProgram @relation(fields: [idProgram], references: [idProgram])
 
   @@id([idTrainer,idProgram])
@@ -170,7 +169,7 @@ model Routine{
   // se traduce como idCreator en esta tabla
   idCreator            Int                    @map("id_creador")
 
-  creator              Trainer                @relation(fields: [idCreator], references: [idUser])
+  creator              Trainer                @relation(fields: [idCreator], references: [idTrainer])
 
   routineBelongProgram RoutineBelongProgram[]
   validateRoutine      ValidateRoutine?
@@ -191,7 +190,7 @@ model ValidateRoutine{
   observations String      @map("observaciones")
 
   routine      Routine     @relation(fields: [idRoutine], references: [idRoutine])
-  validator    HeadTrainer @relation(fields: [idValdidator], references: [idUser])
+  validator    HeadTrainer @relation(fields: [idValdidator], references: [idHeadTrainer])
 
   @@id([idValdidator,idRoutine])
   @@map("Validar_Rutina")
@@ -204,7 +203,7 @@ model Exercise{
   date                         DateTime                      @map("fecha") @default(now()) @db.Date
   idCreator                    Int                           @map("id_creador")
  
-  creator                      Trainer                       @relation(fields: [idCreator], references: [idUser])
+  creator                      Trainer                       @relation(fields: [idCreator], references: [idTrainer])
  
   classificationByType         ClassificationByType[]
   classificationByMuscleGroups ClassificationByMuscleGroup[] 
@@ -261,7 +260,7 @@ model ProgramEnrollment {
   registrationDate DateTime        @default(now()) @map("fecha_inscripcion") @db.Date
   state            String          @map("estado")
 
-  client           Client          @relation(fields: [idClient], references: [idUser])
+  client           Client          @relation(fields: [idClient], references: [idClient])
   program          TrainingProgram @relation(fields: [idProgram], references: [idProgram])
   
   @@id([idClient,idProgram])
@@ -286,8 +285,8 @@ model AdjustmentRequest{
   state      String   @map("estado")
   date       DateTime @default(now()) @map("fecha") @db.Date
 
-  client     Client   @relation(fields: [idClient], references: [idUser])
-  trainer    Trainer  @relation(fields: [idTrainer], references: [idUser])
+  client     Client   @relation(fields: [idClient], references: [idClient])
+  trainer    Trainer  @relation(fields: [idTrainer], references: [idTrainer])
   routine    Routine  @relation(fields: [idRoutine], references: [idRoutine])
   
   @@id([idClient,idTrainer,idRoutine])
@@ -310,7 +309,7 @@ model AssignedRoutine{
   idRoutine Int       @map("id_rutina")
   state     String    @map("estado")
   
-  client    Client    @relation(fields: [idClient], references: [idUser])
+  client    Client    @relation(fields: [idClient], references: [idClient])
   routine   Routine   @relation(fields: [idRoutine], references: [idRoutine])
   
   sessions  Session[]

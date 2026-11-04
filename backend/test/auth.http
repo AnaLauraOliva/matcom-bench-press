@@ -5,12 +5,12 @@ Content-Type: application/json
 {
     "role": "CLIENT",
     "name": "Laura Perez",
-    "email": "laura@correo.com",
+    "email": "laura.client@gym.test",
     "phone": "61111111",
     "password": "toplevelsecret",
     "age": 28,
-    "sex": "FEMENINO",
-    "locationName": "Sede Vedado"
+    "gender": "FEMENINO",
+    "idLocation": 1
 }
 
 ###
@@ -19,8 +19,8 @@ POST http://localhost:3000/api/auth/login
 Content-Type: application/json
 
 {
-    "email": "admin@gimnasio.com",
-    "password": "admin"
+    "email": "ana.admin@gym.test",
+    "password": "Black_witch06"
 }
 
 ###
@@ -29,7 +29,7 @@ POST http://localhost:3000/api/auth/login
 Content-Type: application/json
 
 {
-    "email": "laura@correo.com",
+    "email": "laura.client@gym.test",
     "password": "toplevelsecret"
 }
 

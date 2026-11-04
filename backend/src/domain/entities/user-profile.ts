@@ -1,5 +1,5 @@
 import type { ILocation } from "./location.js";
-import type { Sex } from "./sex.js";
+import type { Gender } from "./gender.js";
 
 interface IUserProfileBase {
     readonly idUser: number;
@@ -14,7 +14,7 @@ export type UserProfile =
 | (IUserProfileBase & {
         readonly role: 'CLIENT';
         readonly age: number;
-        readonly sex: Sex;
+        readonly gender: Gender;
         readonly location: ILocation;
     })
 | (IUserProfileBase &{readonly role: 'ADMIN'})

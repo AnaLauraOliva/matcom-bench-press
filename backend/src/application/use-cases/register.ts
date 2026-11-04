@@ -1,5 +1,5 @@
 import type { Role } from "../../domain/entities/role.js";
-import type { Sex } from "../../domain/entities/sex.js";
+import type { Gender } from "../../domain/entities/gender.js";
 import {
     EmailAlreadyExistsError,
     PermissionDeniedError,
@@ -24,7 +24,7 @@ export type RegisterData = ICommunData &
     | {
         readonly role: 'CLIENT';
         readonly age: number;
-        readonly sex: Sex;
+        readonly gender: Gender;
         readonly idLocation: number;
     }
     | {

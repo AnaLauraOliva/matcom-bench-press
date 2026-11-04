@@ -14,7 +14,7 @@ export class UserAccessGuard {
         const profile = await this.userRepository.findProfileById(targetUserId);
         if(!profile) throw new UserNotFoundError(targetUserId);
 
-        if(!this.accessPolicy.canAccess(actor, profile.id, profile.role)) {
+        if(!this.accessPolicy.canAccess(actor, profile.idUser, profile.role)) {
             throw new UserAccessDeniedError(actor.role, profile.role);
         }
         return profile;

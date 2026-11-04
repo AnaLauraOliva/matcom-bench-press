@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { SEXES } from '../../../domain/entities/sex.js';
+import { GENDERS } from '../../../domain/entities/gender.js';
 
 const email = z.string().trim().toLowerCase().email('Email inválido');
 const newPassword = z.string().min(8,'La contraseña debe tener al menos 8 caracteres').max(72,'La contraseña no puede superar 72 caracteres');
@@ -33,7 +33,7 @@ export const registerScheme = z.discriminatedUnion('role', [
         ...common,
         role: z.literal('CLIENT'),
         age: z.number().int().positive().max(120),
-        sex: z.enum(SEXES),
+        gender: z.enum(GENDERS),
         idLocation: z.int().positive(),
     }),
 ]);

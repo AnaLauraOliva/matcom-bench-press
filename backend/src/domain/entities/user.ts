@@ -1,5 +1,5 @@
 import type { Role } from "./role.js";
-import type { Sex } from "./sex.js";
+import type { Gender } from "./gender.js";
 
 export interface IUser {
     readonly idUser: number;
@@ -23,7 +23,7 @@ export type NewUser =
     | (IBaseNewUserData & {
         readonly role: 'CLIENT';
         readonly age: number;
-        readonly sex: Sex;
+        readonly gender: Gender;
         readonly idLocation: number;
     })
     | (IBaseNewUserData &{readonly role: 'ADMIN'})

@@ -1,4 +1,4 @@
-import type { Sex } from "../../domain/entities/sex.js";
+import type { Gender } from "../../domain/entities/gender.js";
 import type { UserProfile } from "../../domain/entities/user-profile.js";
 import { toLocationDto, type ILocationDTO } from "./location-dto.js";
 
@@ -20,13 +20,13 @@ export type UserDTO =
 | (IUserDTOBase & {
     readonly role: 'CLIENT';
     readonly age: number;
-    readonly gender: Sex;
+    readonly gender: Gender;
     readonly location: ILocationDTO;
 })
 
 export function toUserDto(profile: UserProfile): UserDTO{
     const base = {
-        id: profile.id,
+        id: profile.idUser,
         name: profile.name,
         email: profile.email,
         phone: profile.phone,
@@ -57,7 +57,7 @@ export function toUserDto(profile: UserProfile): UserDTO{
                 ...base, 
                 role: profile.role, 
                 age: profile.age,
-                gender: profile.sex,
+                gender: profile.gender,
                 location: toLocationDto(profile.location),
             }
     }
