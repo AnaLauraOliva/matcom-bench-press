@@ -13,6 +13,25 @@ function required(name: string): string {
     return value
 }
 
+/**
+ * Resincroniza la secuencia autoincremental de una tabla con el máximo id existente.
+ * Necesario porque los seeds insertan varias filas con ids explícitos (p. ej. {idUser: 5}),
+ * lo que deja la secuencia por detrás: el próximo INSERT tomaría un id ya ocupado y
+ * fallaría con una violación de clave primaria (P2002).
+ *
+ * Ojo: pg_get_serial_sequence NO distingue mayúsculas a menos que el nombre lleve
+ * comillas dobles embebidas, por eso se pasan como '"Sede"' y no como 'Sede'.
+ */
+async function resetSequence(tableName: string, idColumn: string): Promise<void> {
+    await prisma.$executeRawUnsafe(
+        `SELECT setval(
+            pg_get_serial_sequence('"${tableName}"', '${idColumn}'),
+            COALESCE((SELECT MAX("${idColumn}") FROM "${tableName}"), 0) + 1,
+            false
+        )`
+    );
+}
+
 const prisma = createPrismaClient(required('DATABASE_URL'));
 
 try{
@@ -49,44 +68,47 @@ async function main(){
 
 //===Añadiendo sedes===
 async function seedLocations(){
-    if(await prisma.location.count()>0) return;
-    await prisma.location.createMany({
-        data:[
-            {name: "Sede Centro", address: "Calle 23, esquina a L, Plaza"},
-            {name: "Sede Este"  , address: "Avenida del Puerto 120, Habana del Este"}
-        ],
-        skipDuplicates:true,
-    });
-    console.log("Datos de la tabla Sede añadidos correctamente")
+    if (await prisma.location.count() === 0) {
+        await prisma.location.createMany({
+            data:[
+                {name: "Sede Centro", address: "Calle 23, esquina a L, Plaza"},
+                {name: "Sede Este"  , address: "Avenida del Puerto 120, Habana del Este"}
+            ],
+            skipDuplicates:true,
+        });
+        console.log("Datos de la tabla Sede añadidos correctamente")
+    }
+    await resetSequence('Sede', 'id_sede');
 }
 
 async function seedUsers(){
-    if(await prisma.user.count()>0) return;
+    if (await prisma.user.count() === 0) {
+        const hasher = new BcryptPasswordHasher(12);
+        const password = await hasher.hash('WeWillRockYou2026!')
+        await prisma.user.createMany({
+            data:[
+                // ==Administradores==
+                {idUser:1 , name: "Diana Martínez"    , email: "diana.admin@gym.test"    , phone: "55501010", active:true, password: await hasher.hash('Dimoon2!')},
+                {idUser:2 , name: "José Antonio Bello", email: "jose.admin@gym.test"     , phone: "55501011", active:true, password: await hasher.hash('jotaBello1!')},
+                {idUser:3 , name: "Andriu Ferreyra"   , email: "andriu.admin@gym.test"   , phone: "55501012", active:true, password: await hasher.hash('drewds3!')},
+                {idUser:4 , name: "Yisell Velázquez"  , email: "yisell.admin@gym.test"   , phone: "55501014", active:true, password: await hasher.hash('G153ll3!')},
+                {idUser:5 , name: "Ana Laura Oliva"   , email: "ana.admin@gym.test"      , phone: "55501015", active:true, password: await hasher.hash('Black_witch06')},
 
-    const hasher = new BcryptPasswordHasher(12);
-    const password = await hasher.hash('WeWillRockYou2026!')
-    await prisma.user.createMany({
-        data:[
-            // ==Administradores==
-            {idUser:1 , name: "Diana Martínez"    , email: "diana.admin@gym.test"    , phone: "55501010", active:true, password: await hasher.hash('Dimoon2!')},
-            {idUser:2 , name: "José Antonio Bello", email: "jose.admin@gym.test"     , phone: "55501011", active:true, password: await hasher.hash('jotaBello1!')},
-            {idUser:3 , name: "Andriu Ferreyra"   , email: "andriu.admin@gym.test"   , phone: "55501012", active:true, password: await hasher.hash('drewds3!')},
-            {idUser:4 , name: "Yisell Velázquez"  , email: "yisell.admin@gym.test"   , phone: "55501014", active:true, password: await hasher.hash('G153ll3!')},
-            {idUser:5 , name: "Ana Laura Oliva"   , email: "ana.admin@gym.test"      , phone: "55501015", active:true, password: await hasher.hash('Black_witch06')},
+                // ==Entrenadores==
+                {idUser:6 , name: "Satoru Gojo"       , email: "satoru.trainer@gym.test" , phone: "55501016", active:true, password},
+                {idUser:7 , name: "Anthony Stark"     , email: "ironman.trainer@gym.test", phone: "55501017", active:true, password},
+                {idUser:8 , name: "Escanor Lion"      , email: "escanor.trainer@gym.test", phone: "55501018", active:true, password},
 
-            // ==Entrenadores==
-            {idUser:6 , name: "Satoru Gojo"       , email: "satoru.trainer@gym.test" , phone: "55501016", active:true, password},
-            {idUser:7 , name: "Anthony Stark"     , email: "ironman.trainer@gym.test", phone: "55501017", active:true, password},
-            {idUser:8 , name: "Escanor Lion"      , email: "escanor.trainer@gym.test", phone: "55501018", active:true, password},
-
-            // ==Clientes
-            {idUser:9 , name: "Light Yagami"      , email: "light.client@gym.test"   , phone: "55501019", active:true, password},
-            {idUser:10, name: "Derek Hale"        , email: "derek.client@gym.test"   , phone: "55501020", active:true, password},
-            {idUser:11, name: "Ace Portgas"       , email: "firefist.client@gym.test", phone: "55501021", active:true, password},
-        ],
-        skipDuplicates:true,
-    });
-    console.log("Datos de la tabla Usuario añadidos correctamente")
+                // ==Clientes
+                {idUser:9 , name: "Light Yagami"      , email: "light.client@gym.test"   , phone: "55501019", active:true, password},
+                {idUser:10, name: "Derek Hale"        , email: "derek.client@gym.test"   , phone: "55501020", active:true, password},
+                {idUser:11, name: "Ace Portgas"       , email: "firefist.client@gym.test", phone: "55501021", active:true, password},
+            ],
+            skipDuplicates:true,
+        });
+        console.log("Datos de la tabla Usuario añadidos correctamente")
+    }
+    await resetSequence('Usuario', 'id_usuario');
 }
 
 async function seedAdmins() {
@@ -146,16 +168,18 @@ async function seedClients(){
 
 //===Tipos de ejercicio===
 async function seedExerciseTypes(){
-    if(await prisma.exerciseType.count()>0) return;
-    await prisma.exerciseType.createMany({
-        data:[
-            {idType:1, name:Type.FUERZA},
-            {idType:2, name:Type.CARDIO},
-            {idType:3, name:Type.FLEXIBILIDAD},
-        ],
-        skipDuplicates:true,
-    });
-    console.log("Datos de la tabla Tipo_Ejercicio añadidos correctamente")
+    if (await prisma.exerciseType.count() === 0) {
+        await prisma.exerciseType.createMany({
+            data:[
+                {idType:1, name:Type.FUERZA},
+                {idType:2, name:Type.CARDIO},
+                {idType:3, name:Type.FLEXIBILIDAD},
+            ],
+            skipDuplicates:true,
+        });
+        console.log("Datos de la tabla Tipo_Ejercicio añadidos correctamente")
+    }
+    await resetSequence('Tipo_Ejercicio', 'id_tipo');
 }
 
 //===Grupos musculares===
@@ -181,26 +205,28 @@ async function seedMuscleGroups(){
 
 //===Ejercicios creados por los entrenadores===
 async function seedExercises(){
-    if(await prisma.exercise.count()>0) return;
-    await prisma.exercise.createMany({
-        data:[
-            // Gojo
-            {name:"Press de banca"                , description:"Empuje horizontal con barra en banco plano"                        , idCreator:6},
-            {name:"Sentadilla"                    , description:"Flexión de rodillas y cadera con barra"                            , idCreator:6},
-            {name:"Remo con mancuerna"            , description:"Tracción unilateral de mancuerna hacia la cadera"                  , idCreator:6},
-            {name:"Curl de bíceps"                , description:"Flexión de codo con mancuernas"                                    , idCreator:6},
-            // Stark
-            {name:"Caminata rápida"               , description:"Desplazamiento continuo a ritmo elevado"                           , idCreator:7},
-            {name:"Bicicleta estática"            , description:"Pedaleo continuo en bicicleta estacionaria"                        , idCreator:7},
-            {name:"Plancha Abdominal"             , description:"Sostener el cuerpo alineado sobre antebrazos y pies"               , idCreator:7},
-            // Escanor
-            {name:"Estiramiento de isquiotibiales", description:"Flexión de tronco controlada con piernas extendidas"               , idCreator:8},
-            {name:"Estiramiento de pectoral"      , description:"Apertura del brazo apoyado contra una pared"                       , idCreator:8},
-            {name:"Movilidad de cadera"           , description:"Rotaciones controladas de cadera en posición de pie"               , idCreator:8},
-        ],
-        skipDuplicates:true,
-    });
-    console.log("Datos de la tabla Ejercicio añadidos correctamente")
+    if (await prisma.exercise.count() === 0) {
+        await prisma.exercise.createMany({
+            data:[
+                // Gojo
+                {name:"Press de banca"                , description:"Empuje horizontal con barra en banco plano"                        , idCreator:6},
+                {name:"Sentadilla"                    , description:"Flexión de rodillas y cadera con barra"                            , idCreator:6},
+                {name:"Remo con mancuerna"            , description:"Tracción unilateral de mancuerna hacia la cadera"                  , idCreator:6},
+                {name:"Curl de bíceps"                , description:"Flexión de codo con mancuernas"                                    , idCreator:6},
+                // Stark
+                {name:"Caminata rápida"               , description:"Desplazamiento continuo a ritmo elevado"                           , idCreator:7},
+                {name:"Bicicleta estática"            , description:"Pedaleo continuo en bicicleta estacionaria"                        , idCreator:7},
+                {name:"Plancha Abdominal"             , description:"Sostener el cuerpo alineado sobre antebrazos y pies"               , idCreator:7},
+                // Escanor
+                {name:"Estiramiento de isquiotibiales", description:"Flexión de tronco controlada con piernas extendidas"               , idCreator:8},
+                {name:"Estiramiento de pectoral"      , description:"Apertura del brazo apoyado contra una pared"                       , idCreator:8},
+                {name:"Movilidad de cadera"           , description:"Rotaciones controladas de cadera en posición de pie"               , idCreator:8},
+            ],
+            skipDuplicates:true,
+        });
+        console.log("Datos de la tabla Ejercicio añadidos correctamente")
+    }
+    await resetSequence('Ejercicio', 'id_ejercicio');
 }
 
 //===Clasificación de tipo de los ejercicios===
@@ -257,31 +283,33 @@ async function seedClassificationByMuscleGroups(){
 
 //===Programas de entrenamiento===
 async function seedTrainingPrograms(){
-    if(await prisma.trainingProgram.count()>0) return;
-    await prisma.trainingProgram.createMany({
-        data:[
-            {
-                name:"Hipertrofia inicial",
-                active:true,
-                objetive:"Aumentar fuerza y masa muscular con progresión gradual",
-                desciption:"Programa orientado a principiantes que desean desarrollar su musculatura mediante ejercicios de fuerza básicos y una progresión de carga controlada.",
-            },
-            {
-                name:"Resistencia general",
-                active:true,
-                objetive:"Mejorar capacidad cardiovascular y resistencia muscular",
-                desciption:"Programa centrado en actividades aeróbicas continuas y ejercicios de tonificación para elevar la resistencia física general.",
-            },
-            {
-                name:"Movilidad y Bienestar",
-                active:true,
-                objetive:"Mejorar movilidad articular y flexibilidad",
-                desciption:"Programa basado en estiramientos y ejercicios de movilidad articular para mejorar la flexibilidad y prevenir lesiones.",
-            },
-        ],
-        skipDuplicates:true,
-    });
-    console.log("Datos de la tabla Programa_de_Entrenamiento añadidos correctamente")
+    if (await prisma.trainingProgram.count() === 0) {
+        await prisma.trainingProgram.createMany({
+            data:[
+                {
+                    name:"Hipertrofia inicial",
+                    active:true,
+                    objetive:"Aumentar fuerza y masa muscular con progresión gradual",
+                    desciption:"Programa orientado a principiantes que desean desarrollar su musculatura mediante ejercicios de fuerza básicos y una progresión de carga controlada.",
+                },
+                {
+                    name:"Resistencia general",
+                    active:true,
+                    objetive:"Mejorar capacidad cardiovascular y resistencia muscular",
+                    desciption:"Programa centrado en actividades aeróbicas continuas y ejercicios de tonificación para elevar la resistencia física general.",
+                },
+                {
+                    name:"Movilidad y Bienestar",
+                    active:true,
+                    objetive:"Mejorar movilidad articular y flexibilidad",
+                    desciption:"Programa basado en estiramientos y ejercicios de movilidad articular para mejorar la flexibilidad y prevenir lesiones.",
+                },
+            ],
+            skipDuplicates:true,
+        });
+        console.log("Datos de la tabla Programa_de_Entrenamiento añadidos correctamente")
+    }
+    await resetSequence('Programa_de_Entrenamiento', 'id_programa');
 }
 
 //===Grupos cubiertos por cada programa===
@@ -347,16 +375,18 @@ async function seedProgramEnrollments(){
 
 //===Rutinas===
 async function seedRoutines(){
-    if(await prisma.routine.count()>0) return;
-    await prisma.routine.createMany({
-        data:[
-            {idRoutine:1, name:"Fuerza cuerpo completo", strength:1.00, cardio:0.00, flexibility:0.00, exercisesNumber:5, idCreator:6},
-            {idRoutine:2, name:"Resistencia básica"    , strength:0.50, cardio:0.50, flexibility:0.00, exercisesNumber:4, idCreator:7},
-            {idRoutine:3, name:"Movilidad general"     , strength:0.00, cardio:0.00, flexibility:1.00, exercisesNumber:3, idCreator:8},
-        ],
-        skipDuplicates:true,
-    });
-    console.log("Datos de la tabla Rutina añadidos correctamente")
+    if (await prisma.routine.count() === 0) {
+        await prisma.routine.createMany({
+            data:[
+                {idRoutine:1, name:"Fuerza cuerpo completo", strength:1.00, cardio:0.00, flexibility:0.00, exercisesNumber:5, idCreator:6},
+                {idRoutine:2, name:"Resistencia básica"    , strength:0.50, cardio:0.50, flexibility:0.00, exercisesNumber:4, idCreator:7},
+                {idRoutine:3, name:"Movilidad general"     , strength:0.00, cardio:0.00, flexibility:1.00, exercisesNumber:3, idCreator:8},
+            ],
+            skipDuplicates:true,
+        });
+        console.log("Datos de la tabla Rutina añadidos correctamente")
+    }
+    await resetSequence('Rutina', 'id_rutina');
 }
 
 //===Rutina pertenece a programas===
