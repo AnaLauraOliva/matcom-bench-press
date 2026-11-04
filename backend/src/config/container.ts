@@ -1,7 +1,7 @@
 import { Login } from "../application/use-cases/login.js";
 import { RegisterUser } from "../application/use-cases/register.js";
 import { ListLocations } from "../application/use-cases/list-location.js";
-import { RegisterPolicy } from "../domain/policies/register-policy.js";
+import { RegisterPolicy } from "../domain/policies/registration-policy.js";
 import { createPrismaClient } from "../infrastructure/database/prisma-client.js";
 import { PrismaLocationRepository } from "../infrastructure/database/repositories/prisma-sede-repository.js";
 import { PrismaUserRepository } from "../infrastructure/database/repositories/prisma-user-repository.js";

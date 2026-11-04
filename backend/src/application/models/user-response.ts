@@ -1,8 +1,10 @@
-import type { Role } from "../../domain/entities/role.js";
+import type { Role } from "../../domain/entities/role.js";  
 import type { IUser } from "../../domain/entities/user.js";
 
-export interface IPublicUser {
-    readonly id: number;
+// Datos públicos de un usuario
+
+export interface IUserResponse {
+    readonly idUser: number;
     readonly name: string;
     readonly email: string;
     readonly phone: string;
@@ -11,9 +13,9 @@ export interface IPublicUser {
     readonly registerDate: Date;
 }
 
-export function toPublicUser(user: IUser): IPublicUser {
+export function toUserResponse(user: IUser): IUserResponse {
     return {
-        id: user.idUser,
+        idUser: user.idUser,
         name: user.name,
         email: user.email,
         phone: user.phone,

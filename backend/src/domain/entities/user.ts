@@ -12,7 +12,7 @@ export interface IUser {
     readonly role: Role;
 }
 
-interface IBaseNewUserData {
+interface INewUserBase {
     readonly phone: string;
     readonly name: string;
     readonly email: string;
@@ -20,14 +20,14 @@ interface IBaseNewUserData {
 }
 //unión disciminada por roles
 export type NewUser = 
-    | (IBaseNewUserData & {
+    | (INewUserBase & {
         readonly role: 'CLIENT';
         readonly age: number;
         readonly gender: Gender;
         readonly idLocation: number;
     })
-    | (IBaseNewUserData &{readonly role: 'ADMIN'})
-    | (IBaseNewUserData &{
+    | (INewUserBase &{readonly role: 'ADMIN'})
+    | (INewUserBase &{
         readonly role: 'TRAINER' | 'HEAD_TRAINER';
         readonly specialty: string;
     });

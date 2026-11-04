@@ -1,10 +1,10 @@
 import type { Role } from "../entities/role.js";
 import type { IUserActor } from "../entities/user-actor.js";
-import type { RegisterPolicy } from "./register-policy.js";
+import type { RegistrationPolicy } from "./registration-policy.js";
 
 export class UserAccessPolicy {
     constructor(
-        private readonly registrationPolicy: RegisterPolicy
+        private readonly registrationPolicy: RegistrationPolicy
     ){}
 
     canAccess(actor: IUserActor, targetId: number, targetRole: Role): boolean {

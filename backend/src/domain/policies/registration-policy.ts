@@ -11,7 +11,7 @@ const CAN_REGISTER: Readonly<Record<Role | 'ANONYMOUS', readonly Role[]>>={
     ADMIN: ['CLIENT','TRAINER','HEAD_TRAINER','ADMIN'],
 };
 
-export class RegisterPolicy {
+export class RegistrationPolicy {
     canRegister(actor: Role | null, objetive: Role): boolean {
         const who = actor ?? 'ANONYMOUS';
         return CAN_REGISTER[who].includes(objetive);

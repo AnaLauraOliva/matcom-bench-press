@@ -1,7 +1,7 @@
 //Algunos errores personalizados
 import { extend } from "zod/mini";
-import type { Role } from "../entities/role.js";
-export abstract class DomainError extends Error {
+import type { Role } from "../../domain/entities/role.js";
+export abstract class ApplicationError extends Error {
     abstract readonly code: string;
     
     constructor(message: string) {
@@ -10,60 +10,60 @@ export abstract class DomainError extends Error {
     }
 }
 
-export class InvalidCredentialsError extends DomainError{
+export class InvalidCredentialsError extends ApplicationError{
     readonly code = 'INVALID_CREDENTIALS';
     constructor() {
         super('credenciales inválidas.');
     }
 }
 
-export class AmbiguousNameError extends DomainError{
+export class AmbiguousNameError extends ApplicationError{
     readonly code = 'AMBIGUOUS_NAME';
     constructor() {
         super('Existen varios usuarios con ese nombre. Inicia sesión con tu email.');
     }
 }
 
-export class InactiveUserError extends DomainError{
+export class InactiveUserError extends ApplicationError{
     readonly code = 'INACTIVE_USER';
     constructor() {
         super('La cuenta no está activa');
     }
 }
 
-export class InvalidTokenError extends DomainError {
+export class InvalidTokenError extends ApplicationError {
     readonly code = 'INVALID_TOKEN';
     constructor() {
         super('El token proporcionado no es válido o ha expirado.');
     }
 }
 
-export class PermissionDeniedError extends DomainError {
-    readonly code = 'PERMISSION_DENIED';
-    constructor(actor: Role | null, objetive: Role) {
+export class RegistrationNotAllowedError extends ApplicationError {
+    readonly code = 'REGISTRATION_NOT_ALLOWED';
+    constructor(actorRole: Role | null, objetive: Role) {
         super(
-            actor === null
+            actorRole === null
                 ? 'Sin iniciar sesión solo es posible registrarse como cliente.'
-                : `Un ${actor} no tiene permisos para registrar usuarios con rol ${objetive}.`
+                : `Un ${actorRole} no tiene permisos para registrar usuarios con rol ${objetive}.`
         );
     }
 }
 
-export class EmailAlreadyExistsError extends DomainError {
+export class EmailAlreadyExistsError extends ApplicationError {
     readonly code = 'EMAIL_ALREADY_EXISTS';
     constructor() {
         super('Ya existe un usuario con ese email.');
     }
 }
 
-export class LocationNotFoundError extends DomainError {
+export class LocationNotFoundError extends ApplicationError {
     readonly code = 'LOCATION_NOT_FOUND';
     constructor(idLocation: number) {
         super(`La sede con el ID ${idLocation} no fue encontrada.`);
     }
 }
 
-export class UserNotFoundError extends DomainError{
+export class UserNotFoundError extends ApplicationError{
     readonly code = 'USER_NOT_FOUND';
 
     constructor(id: number){
@@ -71,7 +71,7 @@ export class UserNotFoundError extends DomainError{
     }
 }
 
-export class UserAccessDeniedError extends DomainError{
+export class UserAccessDeniedError extends ApplicationError{
     readonly code = 'USER_ACCESS_DENIED';
 
     constructor(actorRole: Role, targetRole: Role){
