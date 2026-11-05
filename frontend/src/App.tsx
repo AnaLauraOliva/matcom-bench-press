@@ -1,5 +1,4 @@
-
-import { useState, type FormEvent, useRef, useEffect } from 'react'
+import { useState, type FormEvent, useEffect } from 'react'
 import {
   Activity,
   ArrowRight,
@@ -14,24 +13,12 @@ import {
 import './App.css'
 
 import axios from 'axios'
-import {
-  login,
-  register,
-  getLocations,
-  type Location,
-} from './api/auth'
+import { login, register } from './api/auth'
+import { getLocations } from './api/locations'
+import type { Location } from './types/location'
 
-type AuthMode = 'login' | 'register'
-
-type AuthForm = {
-  name: string
-  email: string
-  phone: string
-  password: string
-  age: string
-  sex: '' | 'FEMENINO' | 'MASCULINO' | 'OTRO'
-  idLocation: string
-}
+import AuthModal from './components/auth/AuthModal'
+import type { AuthForm, AuthMode } from './types/auth'
 
 const features = [
   {
@@ -53,183 +40,6 @@ const features = [
       'Facilita el seguimiento de las sesiones y la evolución del entrenamiento.',
   },
 ]
-
-
-type SelectOption = {
-  value: string
-  label: string
-}
-
-type CustomSelectProps = {
-  value: string
-  options: SelectOption[]
-  placeholder: string
-  onChange: (value: string) => void
-  disabled?: boolean
-}
-
-function CustomSelect({
-  value,
-  options,
-  placeholder,
-  onChange,
-  disabled = false,
-}: CustomSelectProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [activeIndex, setActiveIndex] = useState(0)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  const selectedOption = options.find((option) => option.value === value)
-
-  useEffect(() => {
-    function handleOutsideClick(event: PointerEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false)
-      }
-    }
-
-    document.addEventListener('pointerdown', handleOutsideClick)
-
-    return () => {
-      document.removeEventListener('pointerdown', handleOutsideClick)
-    }
-  }, [])
-
-  function chooseOption(option: SelectOption) {
-    onChange(option.value)
-    setIsOpen(false)
-  }
-
-  function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
-    if (disabled || options.length === 0) return
-    
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault()
-
-      if (!isOpen) {
-        setIsOpen(true)
-        const selectedIndex = options.findIndex(
-          (option) => option.value === value,
-        )
-        setActiveIndex(
-          selectedIndex >= 0 ? selectedIndex : 0,
-        )
-        return
-      }
-
-      setActiveIndex((current) => {
-        if (event.key === 'ArrowDown') {
-          return (current + 1) % options.length
-        }
-
-        return (current - 1 + options.length) % options.length
-      })
-    }
-
-    if (event.key === 'Enter' && isOpen) {
-      event.preventDefault()
-      chooseOption(options[activeIndex])
-    }
-
-    if (event.key === 'Escape') {
-      setIsOpen(false)
-    }
-
-    if (event.key === 'Home' && isOpen) {
-      event.preventDefault()
-      setActiveIndex(0)
-    }
-
-    if (event.key === 'End' && isOpen) {
-      event.preventDefault()
-      setActiveIndex(options.length - 1)
-    }
-  }
-
-  return (
-    <div className="custom-select" ref={containerRef}>
-      <button
-        type="button"
-        className={`custom-select-trigger ${isOpen ? 'is-open' : ''}`}
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        disabled={disabled}
-        onClick={() => {
-          if (disabled || options.length === 0) return
-
-          if (!isOpen) {
-            const selectedIndex = options.findIndex(
-              (option) => option.value === value,
-            )
-            setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0)
-          }
-
-          setIsOpen((open) => !open)
-        }}
-        onKeyDown={handleKeyDown}
-      >
-        <span className={!selectedOption ? 'custom-select-placeholder' : ''}>
-          {selectedOption?.label ?? placeholder}
-        </span>
-
-        <svg
-          className="custom-select-chevron"
-          viewBox="0 0 24 24"
-          width="18"
-          height="18"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="m6 9 6 6 6-6"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div className="custom-select-menu" role="listbox">
-          {options.map((option, index) => (
-            <div
-              key={option.value}
-              id={`custom-option-${option.value}`}
-              role="option"
-              aria-selected={option.value === value}
-              className={[
-                'custom-select-option',
-                option.value === value ? 'is-selected' : '',
-                index === activeIndex ? 'is-active' : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              onMouseEnter={() => setActiveIndex(index)}
-              onClick={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                chooseOption(option)
-              }}
-            >
-              <span>{option.label}</span>
-
-              {option.value === value && (
-                <span className="custom-select-check" aria-hidden="true">
-                  ✓
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
 
 function App() {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null)
@@ -267,6 +77,13 @@ function App() {
 
     loadLocations()
   }, [])
+
+  function handleFormChange(field: keyof AuthForm, value: string) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }))
+  }
 
   function openAuth(mode: AuthMode) {
     setAuthMode(mode)
@@ -562,284 +379,21 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
       </footer>
 
       {authMode && (
-        <div
-          className="modal-backdrop"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeAuth()
-          }}
-        >
-          <section
-            className="auth-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="auth-title"
-          >
-            <button
-              className="modal-close"
-              type="button"
-              aria-label="Cerrar formulario"
-              onClick={closeAuth}
-            >
-              <X size={22} />
-            </button>
-
-            <span className="auth-logo">
-              <Dumbbell size={25} />
-            </span>
-
-            <span className="section-label">
-              {authMode === 'register' ? 'ÚNETE A MATCOM BENCH PRESS' : 'QUÉ BUENO VERTE'}
-            </span>
-            <h2 id="auth-title">
-              {authMode === 'register'
-                ? 'Crea tu cuenta'
-                : 'Inicia sesión'}
-            </h2>
-            <p className="auth-subtitle">
-              {authMode === 'register'
-                ? 'Prepara el camino para tu próximo objetivo.'
-                : 'Accede a tu espacio de entrenamiento.'}
-            </p>
-
-            <form className="auth-form" onSubmit={handleSubmit}>
-              {authMode === 'register' && (
-                <>
-                  <label>
-                    Nombre completo
-                    <input
-                      type="text"
-                      name="name"
-                      autoComplete="name"
-                      value={form.name}
-                      onChange={(event) =>
-                        setForm({ ...form, name: event.target.value })
-                      }
-                      maxLength={100}
-                      required
-                    />
-                  </label>
-
-                  <label>
-                    Teléfono
-                    <input
-                      type="tel"
-                      name="phone"
-                      autoComplete="tel"
-                      inputMode="numeric"
-                      value={form.phone}
-                      onChange={(event) =>
-                        setForm({
-                          ...form,
-                          phone: event.target.value.replace(/\D/g, ''),
-                        })
-                      }
-                      maxLength={30}
-                      pattern="[0-9]+"
-                      title="Introduce el teléfono usando solo números."
-                      required
-                    />
-                  </label>
-
-                  <label>
-                    Edad
-                    <div className="age-control">
-                      <input
-                        className="age-input"
-                        type="number"
-                        name="age"
-                        min={1}
-                        max={120}
-                        step={1}
-                        value={form.age}
-                        onChange={(event) =>
-                          setForm({ ...form, age: event.target.value })
-                        }
-                        required
-                      />
-
-                      <div className="age-buttons">
-                        <button
-                          type="button"
-                          aria-label="Aumentar edad"
-                          title="Aumentar edad"
-                          disabled={Number(form.age) >= 120}
-                          onClick={() =>
-                            setForm({
-                              ...form,
-                              age: String(Math.min(120, (Number(form.age) || 0) + 1)),
-                            })
-                          }
-                        >
-                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
-                            <path
-                              d="m6 14 6-6 6 6"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </button>
-
-                        <button
-                          type="button"
-                          aria-label="Disminuir edad"
-                          title="Disminuir edad"
-                          disabled={form.age !== '' && Number(form.age) <= 1}
-                          onClick={() =>
-                            setForm({
-                              ...form,
-                              age: String(Math.max(1, (Number(form.age) || 2) - 1)),
-                            })
-                          }
-                        >
-                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" aria-hidden="true">
-                            <path
-                              d="m6 10 6 6 6-6"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </label>
-
-                  <label>
-                    Género
-                    <CustomSelect
-                      value={form.sex}
-                      placeholder="Selecciona una opción"
-                      options={[
-                        { value: 'FEMENINO', label: 'Femenino' },
-                        { value: 'MASCULINO', label: 'Masculino' },
-                        { value: 'OTRO', label: 'Otro' },
-                      ]}
-                      onChange={(value) =>
-                        setForm({
-                          ...form,
-                          sex: value as AuthForm['sex'],
-                        })
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Sede del gimnasio
-                    <CustomSelect
-                      value={form.idLocation}
-                      placeholder={
-                        isLoadingLocations
-                          ? 'Cargando sedes...'
-                          : locationsError
-                            ? 'Sedes no disponibles'
-                            : 'Selecciona una sede'
-                      }
-                      options={locations.map((location) => ({
-                        value: String(location.idLocation),
-                        label: location.name,
-                      }))}
-                      disabled={
-                        isLoadingLocations ||
-                        locations.length === 0 ||
-                        Boolean(locationsError)
-                      }
-                      onChange={(value) =>
-                        setForm({ ...form, idLocation: value })
-                      }
-                    />
-                    {locationsError && (
-                      <p className="form-message" role="alert">
-                        {locationsError}
-                      </p>
-                    )}
-                  </label>
-                </>
-              )}
-
-              <label>
-                Correo electrónico
-                <input
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  placeholder="tu@correo.com"
-                  value={form.email}
-                  onChange={(event) =>
-                    setForm({ ...form, email: event.target.value })
-                  }
-                  required
-                />
-              </label>
-
-              <label>
-                Contraseña
-                <input
-                  type="password"
-                  name="password"
-                  autoComplete={
-                    authMode === 'register' ? 'new-password' : 'current-password'
-                  }
-                  value={form.password}
-                  onChange={(event) =>
-                    setForm({ ...form, password: event.target.value })
-                  }
-                  minLength={authMode === 'register' ? 8 : undefined}
-                  maxLength={authMode === 'register' ? 72 : undefined}
-                  pattern={
-                    authMode === 'register'
-                      ? '(?=.*[A-Za-z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,72}'
-                      : undefined
-                  }
-                  title={
-                    authMode === 'register'
-                      ? 'Debe tener entre 8 y 72 caracteres, incluyendo una letra, un número y un símbolo.'
-                      : undefined
-                  }
-                  required
-                />
-              </label>
-
-              {message && (
-                <p className="form-message" role="status">
-                  {message}
-                </p>
-              )}
-
-              <button
-                className="button button-primary auth-submit"
-                type="submit"
-                disabled={isSubmitting}
-              >
-                {isSubmitting
-                  ? 'Procesando...'
-                  : authMode === 'register'
-                    ? 'Crear cuenta'
-                    : 'Iniciar sesión'}
-                {!isSubmitting && <ArrowRight size={18} />}
-              </button>
-            </form>
-
-            <p className="auth-switch">
-              {authMode === 'register'
-                ? '¿Ya tienes una cuenta?'
-                : '¿Todavía no tienes una cuenta?'}{' '}
-              <button
-                type="button"
-                onClick={() =>
-                  openAuth(authMode === 'register' ? 'login' : 'register')
-                }
-              >
-                {authMode === 'register'
-                  ? 'Inicia sesión'
-                  : 'Regístrate'}
-              </button>
-            </p>
-
-          </section>
-        </div>
+        <AuthModal
+          mode={authMode}
+          form={form}
+          locations={locations}
+          isLoadingLocations={isLoadingLocations}
+          locationsError={locationsError}
+          message={message}
+          isSubmitting={isSubmitting}
+          onClose={closeAuth}
+          onSubmit={handleSubmit}
+          onSwitchMode={() =>
+            openAuth(authMode === 'register' ? 'login' : 'register')
+          }
+          onFormChange={handleFormChange}
+        />
       )}
     </div>
   )
