@@ -22,7 +22,7 @@ export type RegisterClientData = {
   role: 'CLIENT'
   age: number
   sex: 'FEMENINO' | 'MASCULINO' | 'OTRO'
-  locationName: string
+  idLocation: number
 }
 
 export async function login(data: LoginData) {
@@ -35,9 +35,27 @@ export async function login(data: LoginData) {
 }
 
 export async function register(data: RegisterClientData) {
-  const response = await api.post('/registro', data)
+  const response = await api.post('/register', data)
 
   return response.data as {
     user: unknown
   }
+}
+
+const locationsApi = axios.create({
+  baseURL: 'http://localhost:3000/api/locations',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+export type Location = {
+  idLocation: number
+  name: string
+}
+
+export async function getLocations() {
+  const response = await locationsApi.get('/')
+
+  return response.data.locations as Location[]
 }

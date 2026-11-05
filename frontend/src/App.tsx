@@ -14,7 +14,12 @@ import {
 import './App.css'
 
 import axios from 'axios'
-import { login, register } from './api/auth'
+import {
+  login,
+  register,
+  getLocations,
+  type Location,
+} from './api/auth'
 
 type AuthMode = 'login' | 'register'
 
@@ -25,7 +30,7 @@ type AuthForm = {
   password: string
   age: string
   sex: '' | 'FEMENINO' | 'MASCULINO' | 'OTRO'
-  locationName: string
+  idLocation: string
 }
 
 const features = [
@@ -60,6 +65,7 @@ type CustomSelectProps = {
   options: SelectOption[]
   placeholder: string
   onChange: (value: string) => void
+  disabled?: boolean
 }
 
 function CustomSelect({
@@ -67,6 +73,7 @@ function CustomSelect({
   options,
   placeholder,
   onChange,
+  disabled = false,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -97,6 +104,8 @@ function CustomSelect({
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
+    if (disabled || options.length === 0) return
+    
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
 
@@ -147,13 +156,17 @@ function CustomSelect({
         className={`custom-select-trigger ${isOpen ? 'is-open' : ''}`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
+        disabled={disabled}
         onClick={() => {
+          if (disabled || options.length === 0) return
+
           if (!isOpen) {
             const selectedIndex = options.findIndex(
               (option) => option.value === value,
             )
             setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0)
           }
+
           setIsOpen((open) => !open)
         }}
         onKeyDown={handleKeyDown}
@@ -228,10 +241,32 @@ function App() {
     password: '',
     age: '',
     sex: '',
-    locationName: '',
+    idLocation: '',
   })
   const [message, setMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  const [locations, setLocations] = useState<Location[]>([])
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false)
+  const [locationsError, setLocationsError] = useState('')
+  
+  useEffect(() => {
+    async function loadLocations() {
+      try {
+        setIsLoadingLocations(true)
+
+        const data = await getLocations()
+        setLocations(data)
+      } catch (error) {
+        console.error('Error al cargar las sedes:', error)
+        setLocationsError('No se pudieron cargar las sedes. Recarga la página.')
+      } finally {
+        setIsLoadingLocations(false)
+      }
+    }
+
+    loadLocations()
+  }, [])
 
   function openAuth(mode: AuthMode) {
     setAuthMode(mode)
@@ -242,7 +277,7 @@ function App() {
   password: '',
   age: '',
   sex: '',
-  locationName: '',
+  idLocation: '',
 })
     setMessage('')
     setMenuOpen(false)
@@ -259,6 +294,11 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 
   if (authMode === 'register' && !form.sex) {
     setMessage('Selecciona una opción de género.')
+    return
+  }
+
+  if (authMode === 'register' && !form.idLocation) {
+    setMessage('Selecciona una sede del gimnasio.')
     return
   }
   
@@ -285,7 +325,7 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         role: 'CLIENT',
         age: Number(form.age),
         sex: form.sex as 'FEMENINO' | 'MASCULINO' | 'OTRO',
-        locationName: form.locationName.trim(),
+        idLocation: Number(form.idLocation),
       })
 
       setMessage('Registro completado correctamente.')
@@ -599,7 +639,7 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
                       required
                     />
                   </label>
-                  
+
                   <label>
                     Edad
                     <div className="age-control">
@@ -666,7 +706,7 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
                       </div>
                     </div>
                   </label>
-                  
+
                   <label>
                     Género
                     <CustomSelect
@@ -688,15 +728,33 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
 
                   <label>
                     Sede del gimnasio
-                    <input
-                      type="text"
-                      name="locationName"
-                      value={form.locationName}
-                      onChange={(event) =>
-                        setForm({ ...form, locationName: event.target.value })
+                    <CustomSelect
+                      value={form.idLocation}
+                      placeholder={
+                        isLoadingLocations
+                          ? 'Cargando sedes...'
+                          : locationsError
+                            ? 'Sedes no disponibles'
+                            : 'Selecciona una sede'
                       }
-                      required
+                      options={locations.map((location) => ({
+                        value: String(location.idLocation),
+                        label: location.name,
+                      }))}
+                      disabled={
+                        isLoadingLocations ||
+                        locations.length === 0 ||
+                        Boolean(locationsError)
+                      }
+                      onChange={(value) =>
+                        setForm({ ...form, idLocation: value })
+                      }
                     />
+                    {locationsError && (
+                      <p className="form-message" role="alert">
+                        {locationsError}
+                      </p>
+                    )}
                   </label>
                 </>
               )}
@@ -728,13 +786,13 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
                   onChange={(event) =>
                     setForm({ ...form, password: event.target.value })
                   }
-                  minLength={8}
-                  maxLength={72}
+                  minLength={authMode === 'register' ? 8 : undefined}
+                  maxLength={authMode === 'register' ? 72 : undefined}
                   pattern={
                     authMode === 'register'
                       ? '(?=.*[A-Za-z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,72}'
                       : undefined
-                    }
+                  }
                   title={
                     authMode === 'register'
                       ? 'Debe tener entre 8 y 72 caracteres, incluyendo una letra, un número y un símbolo.'
@@ -780,9 +838,6 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
               </button>
             </p>
 
-            <p className="auth-note">
-              La autenticación se habilitará al integrar el backend.
-            </p>
           </section>
         </div>
       )}
