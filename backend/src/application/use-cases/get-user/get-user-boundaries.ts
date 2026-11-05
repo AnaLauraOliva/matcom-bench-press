@@ -11,5 +11,5 @@ export interface IGetUserInputBoundary {
 }
 
 export interface IGetUserOutputBoundary extends IFailureOutputBoundary {
-    pesentSucess(response: IGetUserResponse): void;
+    presentSuccess(response: IGetUserResponse): void;
 }

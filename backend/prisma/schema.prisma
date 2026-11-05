@@ -40,12 +40,13 @@ model Location{
 //Tablas de usuario y sus especializaciones
 model User{
   idUser         Int      @id @default(autoincrement()) @map("id_usuario")
-    phone        String   @map("telefono")
+  // Para el soft delete hay que poner que phone, name y password sean nulleables
+    phone        String?   @map("telefono")
     registerDate DateTime @default(now()) @map("fecha_registro") @db.Date
     active       Boolean  @default(true) @map("activo")
-    name         String   @map("nombre")
+    name         String?   @map("nombre")
     email        String   @unique
-    password     String   @map("contrasena")
+    password     String?   @map("contrasena")
 
     client       Client?
     admin        Admin?

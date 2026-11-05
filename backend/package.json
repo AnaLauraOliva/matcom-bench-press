@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/interfaces/http/server.ts",
+    "dev": "tsx watch src/config/main.ts",
     "build": "tsc",
     "start": "node dist/index.ts",
     "typecheck": "tsc --noEmit",

@@ -8,7 +8,7 @@ export class UserAccessPolicy {
     ){}
 
     canAccess(actor: IUserActor, targetId: number, targetRole: Role): boolean {
-        if(actor.id === targetId) return true;
+        if(actor.idUser === targetId) return true;
         return this.registrationPolicy.canRegister(actor.role, targetRole);
     }
 }

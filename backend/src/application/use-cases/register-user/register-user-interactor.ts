@@ -5,7 +5,7 @@ import type { ILocationGateway } from "../../gateways/location-gateway.js";
 import type { IPasswordHashGateway } from "../../gateways/password-hash-gateway.js";
 import type { IUserGateway } from "../../gateways/user-gateway.js";
 import { toUserResponse } from "../../models/user-response.js";
-import type { IRegisterUserInputBoundary, IRegisterUserOutputBoundary, IRegisterUserRequest } from "./register-user-boundary.js";
+import type { IRegisterUserInputBoundary, IRegisterUserOutputBoundary, IRegisterUserRequest } from "./register-user-boundaries.js";
 
 export class RegisterUserInteractor implements IRegisterUserInputBoundary {
     constructor(
