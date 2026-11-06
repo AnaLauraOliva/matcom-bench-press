@@ -48,53 +48,17 @@ function toRecord(row: IUserRow): IUserRecord {
 // cualquiera. Si Prisma reporta el índice (meta.target), solo lo tratamos como
 // email duplicado cuando la restricción violada es la del email; si no hay
 // detalle disponible, asumimos que es el email (hipótesis conservadora).
-function isEmailUniqueViolation(error: unknown): boolean {
-    if (
-        typeof error !== "object" ||
-        error === null ||
-        !("code" in error) ||
-        error.code !== "P2002"
-    ) {
-        return false;
-    }
-    const target: unknown = (error as { meta?: { target?: unknown } }).meta
-        ?.target;
-    if (target === undefined) return true;
-    if (typeof target === "string") {
-        return target.toLowerCase().includes("email");
-    }
-    if (Array.isArray(target)) {
-        return target.some(
-            (field) =>
-                typeof field === "string" &&
-                field.toLowerCase().includes("email"),
-        );
-    }
-    return true;
-}
-function isPhoneUniqueViolation(error: unknown): boolean {
-    if (
-        typeof error !== "object" ||
-        error === null ||
-        !("code" in error) ||
-        error.code !== "P2002"
-    ) {
-        return false;
-    }
-    const target: unknown = (error as { meta?: { target?: unknown } }).meta
-        ?.target;
-    if (target === undefined) return true;
-    if (typeof target === "string") {
-        return target.toLowerCase().includes("phone");
-    }
-    if (Array.isArray(target)) {
-        return target.some(
-            (field) =>
-                typeof field === "string" &&
-                field.toLowerCase().includes("phone"),
-        );
-    }
-    return true;
+function violatedIndex(error: unknown): string {
+    if (!(typeof error === "object" && error !== null && "code" in error && error.code === "P2002"))
+        return "";
+    const meta = (error as {meta?: Record<string, unknown> }).meta;
+    const idx = (meta as { driverAdapterError?: { cause?: { constraint?: { index?: string } } } })
+        ?.driverAdapterError?.cause?.constraint?.index;
+    if (typeof idx === "string") return idx.toLowerCase();   // "Usuario_telefono_key"
+    const target = meta?.target;
+    if (typeof target === "string") return target.toLowerCase();
+    if (Array.isArray(target)) return target.filter(f => typeof f === "string").join(",").toLowerCase();
+    return "";
 }
 function roleTableData(record: NewUserRecord) {
     switch (record.role) {
@@ -157,8 +121,9 @@ export class PrismaUserDataSource implements IUserDataSource {
             });
             return toRecord(row);
         } catch (error){
-            if(isEmailUniqueViolation(error)) throw new EmailAlreadyExistsError();
-            else if(isPhoneUniqueViolation(error)) throw new PhoneAlreadyExistsError();
+            const idx = violatedIndex(error);
+            if(idx.includes("email")) throw new EmailAlreadyExistsError();
+            else if(idx.includes("telefono")) throw new PhoneAlreadyExistsError();
             throw error;
         }
     }
