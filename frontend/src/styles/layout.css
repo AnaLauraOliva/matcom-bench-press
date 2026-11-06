@@ -1,0 +1,156 @@
+/* Encabezado, navegación y pie de página */
+
+
+.site-header {
+width: min(1180px, calc(100% - 48px));
+  min-height: 88px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+
+.brand {
+display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.7px;
+  flex-shrink: 0;
+}
+
+
+.brand-icon {
+display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  color: white;
+  background: var(--primary);
+  border-radius: 13px;
+}
+
+
+.navigation {
+display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+
+.navigation > a:not(.brand) {
+color: #425e5d;
+  text-decoration: none;
+  font-size: 0.91rem;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+
+.navigation > a:hover,
+.text-link:hover,
+.feature-link:hover {
+color: var(--accent);
+}
+
+
+.menu-toggle {
+display: none;
+  padding: 8px;
+  color: var(--primary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+
+.site-footer {
+display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 26px max(24px, calc((100% - 1180px) / 2));
+  background: white;
+  border-top: 1px solid var(--border);
+}
+
+
+.footer-brand {
+font-size: 1.15rem;
+}
+
+
+.footer-brand .brand-icon {
+width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+
+.site-footer p,
+.copyright {
+margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+
+@media (max-width: 1000px) {
+.navigation {
+gap: 17px;
+}
+}
+
+
+@media (max-width: 760px) {
+.site-header {
+min-height: 75px;
+}
+.menu-toggle {
+display: grid;
+    place-items: center;
+}
+.navigation {
+position: absolute;
+    top: 68px;
+    right: 0;
+    left: 0;
+    z-index: 5;
+    display: none;
+    align-items: stretch;
+    gap: 8px;
+    padding: 17px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    box-shadow: 0 16px 35px rgb(0 76 76 / 10%);
+}
+.navigation-open {
+display: flex;
+    flex-direction: column;
+}
+.navigation > a:not(.brand) {
+padding: 12px 8px;
+}
+.site-footer {
+align-items: flex-start;
+    flex-direction: column;
+    gap: 13px;
+    padding: 25px 24px;
+}
+}
+
+
+@media (max-width: 420px) {
+.site-header,
+  .hero,
+  .cta-section {
+width: calc(100% - 32px);
+    position: relative;
+}
+}

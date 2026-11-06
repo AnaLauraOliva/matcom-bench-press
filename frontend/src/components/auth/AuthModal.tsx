@@ -61,7 +61,7 @@ function AuthModal({
         </span>
 
         <span className="section-label">
-          {isRegister ? 'ÚNETE A MATCOM BENCH PRESS' : 'QUÉ BUENO VERTE'}
+          {isRegister ? 'ÚNETE A MATCOM BENCH PRESS' : '¡QUÉ BUENO VERTE!'}
         </span>
 
         <h2 id="auth-title">
