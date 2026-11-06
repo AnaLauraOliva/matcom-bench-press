@@ -35,13 +35,9 @@ export class SessionResolver {
                 ? { kind: "deleted" }
                 : { kind: "inactive" };
         }
-<<<<<<< HEAD
         return {
             kind: "authenticated",
             actor: { idUser: profile.idUser, role: profile.role },
         };
-=======
-        return { kind: "authenticated", actor };
->>>>>>> origin/fix/implementing-clean-architecture
     }
 }
