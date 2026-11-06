@@ -1,0 +1,45 @@
+## Autoregistro de cliente
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+    "role": "CLIENT",
+    "name": "Laura Perez",
+    "email": "laura@correo.com",
+    "phone": "61111111",
+    "password": "toplevelsecret",
+    "age": 28,
+    "sex": "FEMENINO",
+    "locationName": "Sede Vedado"
+}
+
+###
+## Login de admin
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "admin@gimnasio.com",
+    "password": "admin"
+}
+
+###
+## Inicio de sesion con email
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "laura@correo.com",
+    "password": "toplevelsecret"
+}
+
+###
+## Inicio de sesion con nombre
+
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+    "name": "Laura Perez",
+    "password": "toplevelsecret"
+}
