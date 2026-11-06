@@ -1,4 +1,3 @@
-import { extend } from "zod/mini";
 import type { IFailureOutputBoundary } from "../../boundaries/failure-output-boundary.js";
 import type { ITargetUserRequest } from "../../models/target-user-request.js";
 

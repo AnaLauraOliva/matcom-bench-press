@@ -1,5 +1,4 @@
-import { create } from "domain";
-import { EmailAlreadyExistsError } from "../../application/errors/application-errors.js";
+import { EmailAlreadyExistsError, PhoneAlreadyExistsError } from "../../application/errors/application-errors.js";
 import type {
     NewUserRecord,
     IUserDataSource,
@@ -45,15 +44,58 @@ function toRecord(row: IUserRow): IUserRecord {
     };
 }
 
-function isUniqueViolation(error: unknown): boolean {
-    return (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        error.code === "P2002"
-    );
+// P2002 significa que se violó una restricción UNIQUE/PRIMARY, pero puede ser
+// cualquiera. Si Prisma reporta el índice (meta.target), solo lo tratamos como
+// email duplicado cuando la restricción violada es la del email; si no hay
+// detalle disponible, asumimos que es el email (hipótesis conservadora).
+function isEmailUniqueViolation(error: unknown): boolean {
+    if (
+        typeof error !== "object" ||
+        error === null ||
+        !("code" in error) ||
+        error.code !== "P2002"
+    ) {
+        return false;
+    }
+    const target: unknown = (error as { meta?: { target?: unknown } }).meta
+        ?.target;
+    if (target === undefined) return true;
+    if (typeof target === "string") {
+        return target.toLowerCase().includes("email");
+    }
+    if (Array.isArray(target)) {
+        return target.some(
+            (field) =>
+                typeof field === "string" &&
+                field.toLowerCase().includes("email"),
+        );
+    }
+    return true;
 }
-
+function isPhoneUniqueViolation(error: unknown): boolean {
+    if (
+        typeof error !== "object" ||
+        error === null ||
+        !("code" in error) ||
+        error.code !== "P2002"
+    ) {
+        return false;
+    }
+    const target: unknown = (error as { meta?: { target?: unknown } }).meta
+        ?.target;
+    if (target === undefined) return true;
+    if (typeof target === "string") {
+        return target.toLowerCase().includes("phone");
+    }
+    if (Array.isArray(target)) {
+        return target.some(
+            (field) =>
+                typeof field === "string" &&
+                field.toLowerCase().includes("phone"),
+        );
+    }
+    return true;
+}
 function roleTableData(record: NewUserRecord) {
     switch (record.role) {
         case "admin":
@@ -115,7 +157,8 @@ export class PrismaUserDataSource implements IUserDataSource {
             });
             return toRecord(row);
         } catch (error){
-            if(isUniqueViolation(error)) throw new EmailAlreadyExistsError();
+            if(isEmailUniqueViolation(error)) throw new EmailAlreadyExistsError();
+            else if(isPhoneUniqueViolation(error)) throw new PhoneAlreadyExistsError();
             throw error;
         }
     }

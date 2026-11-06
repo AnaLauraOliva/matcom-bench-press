@@ -1,5 +1,8 @@
 import type { UserProfile } from "../../domain/entities/user-profile.js";
-import type { IUserProfileGateway } from "../../application/gateways/user-profile-gateway.js";
+import type {
+    DestructiveOutcome,
+    IUserProfileGateway,
+} from "../../application/gateways/user-profile-gateway.js";
 import type {
     IUserProfileDataSource,
     IUserProfileRecord,
@@ -47,10 +50,10 @@ export class UserProfileGatewayImpl implements IUserProfileGateway {
         const record = await this.dataSource.findById(userId);
         return record ? toUserProfile(record) : null;
     }
-    deleteById(userId: number): Promise<boolean> {
+    deleteById(userId: number): Promise<DestructiveOutcome> {
         return this.dataSource.deleteById(userId);
     }
-    deactivateById(userId: number): Promise<boolean> {
+    deactivateById(userId: number): Promise<DestructiveOutcome> {
         return this.dataSource.deactivateById(userId);
     }
 }

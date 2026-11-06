@@ -17,7 +17,7 @@ import { GetUserController } from "../interfaces/controllers/get-user-controller
 import { ListLocationsController } from "../interfaces/controllers/location-controller.js";
 import { LoginController } from "../interfaces/controllers/login-controller.js";
 import { RegisterUserController } from "../interfaces/controllers/register-user-controller.js";
-import { BcryptPasswordHashGateway } from "../interfaces/gateways/bcypt-password-hash-gateway.js";
+import { BcryptPasswordHashGateway } from "../interfaces/gateways/bcrypt-password-hash-gateway.js";
 import { JwtTokenGateway } from "../interfaces/gateways/jwt-token-gateway.js";
 import { LocationGatewayImpl } from "../interfaces/gateways/location-gateway-impl.js";
 import { UserGatewayImpl } from "../interfaces/gateways/user-gateway-impl.js";
@@ -72,7 +72,7 @@ export function createContainer() {
         userProfileGateway,
     );
     // Círculo 3: los controladores.
-    const sessions = new SessionResolver(tokenGateway);
+    const sessions = new SessionResolver(tokenGateway, userProfileGateway);
     return {
         prisma,
         controllers: {

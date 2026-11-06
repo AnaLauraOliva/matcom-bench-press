@@ -1,4 +1,5 @@
 import { ZodError } from "zod";
+import { UserDeletedError } from "../../application/errors/application-errors.js";
 import type { ApplicationError } from "../../application/errors/application-errors.js";
 import type { IHttpResponse } from "./http-types.js";
 
@@ -8,8 +9,11 @@ const STATUS_BY_ERROR_CODE: Readonly<Record<string, number>> = {
     REGISTRATION_NOT_ALLOWED: 403,
     USER_ACCESS_DENIED: 403,
     USER_NOT_FOUND: 404,
+    USER_DELETED: 404,
     AMBIGUOUS_NAME: 409,
-    EMAIL_ALREADY_REGISTERED: 409,
+    LAST_ADMIN: 409,
+    EMAIL_ALREADY_EXISTS: 409,
+    PHONE_ALREADY_EXISTS: 409,
     LOCATION_NOT_FOUND: 422,
 };
 
@@ -71,6 +75,15 @@ export function invalidToken(): IHttpResponse {
         "INVALID_TOKEN",
         "El token es inválido o ha expirado.",
     );
+}
+// La sesión existe pero el dueño del token ya no está activo
+// (fue desactivado o borrado después de iniciar sesión).
+export function inactiveSession(): IHttpResponse {
+    return errorResponse(403, "INACTIVE_USER", "La cuenta ya no está activa.");
+}
+// La sesión existe pero el dueño del token fue ELIMINADO (borrado suave).
+export function deletedSession(): IHttpResponse {
+    return fromApplicationError(new UserDeletedError());
 }
 export const ok = (body: unknown): IHttpResponse => ({ status: 200, body });
 export const created = (body: unknown): IHttpResponse => ({

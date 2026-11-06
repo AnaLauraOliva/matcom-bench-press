@@ -39,6 +39,6 @@ export type NewUserRecord = INewUserRecordBase &
 export interface IUserDataSource {
     findByEmail(email: string): Promise<IUserRecord | null>;
     findByName(name: string): Promise<IUserRecord[]>;
-    // Lanza EmailAlreadyRegisteredError si el email ya existe.
+    // Lanza EmailAlreadyExistsError si el email ya existe o PhoneAlreadyExists si el teléfono ya existe.
     insert(record: NewUserRecord): Promise<IUserRecord>;
 }

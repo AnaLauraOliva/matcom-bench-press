@@ -12,6 +12,13 @@ export interface IUser {
     readonly role: Role;
 }
 
+// Al borrar (soft delete) el email se reescribe como "deleted{id}".
+// Con este marcador se distingue un usuario ELIMINADO de uno solo DESACTIVADO.
+const DELETED_EMAIL_PATTERN = /^deleted\d+$/;
+export function isDeletedUserEmail(email: string): boolean {
+    return DELETED_EMAIL_PATTERN.test(email);
+}
+
 interface INewUserBase {
     readonly phone: string;
     readonly name: string;

@@ -3,7 +3,7 @@
 import 'dotenv/config'
 import { createPrismaClient } from '../src/infrastructure/database/prisma-client.js'
 import { Gender, Type } from '../src/infrastructure/database/generated/enums.js'
-import { BcryptPasswordHasher } from '../src/infrastructure/security/bcrypt-password-hasher.js'
+import { BcryptPasswordHashGateway } from '../src/interfaces/gateways/bcrypt-password-hash-gateway.js'
 
 function required(name: string): string {
     const value = process.env[name]
@@ -83,7 +83,7 @@ async function seedLocations(){
 
 async function seedUsers(){
     if (await prisma.user.count() === 0) {
-        const hasher = new BcryptPasswordHasher(12);
+        const hasher = new BcryptPasswordHashGateway(12);
         const password = await hasher.hash('WeWillRockYou2026!')
         await prisma.user.createMany({
             data:[

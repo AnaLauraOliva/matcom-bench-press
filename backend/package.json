@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/config/main.ts",
     "build": "tsc",
-    "start": "node dist/index.ts",
+    "start": "node dist/config/main.js",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

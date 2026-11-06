@@ -1,4 +1,7 @@
 import type { Gender } from "../../domain/entities/gender.js";
+// El tipo lo define la capa de aplicación: es el gateway quien traduce el
+// resultado a errores de negocio (outer depende de inner: dirección permitida).
+import type { DestructiveOutcome } from "../../application/gateways/user-profile-gateway.js";
 // Una ficha de usuario tal como la entrega el almacenamiento.
 export interface IUserProfileRecord {
     readonly idUser: number;
@@ -20,7 +23,10 @@ export interface IUserProfileRecord {
 }
 export interface IUserProfileDataSource {
     findById(idUser: number): Promise<IUserProfileRecord | null>;
-    // Devuelven true si el usuario existía.
-    deleteById(idUser: number): Promise<boolean>;
-    deactivateById(idUser: number): Promise<boolean>;
+    // Borra suavemente o desactiva a un usuario. Son operaciones ATÓMICAS:
+    // si el objetivo es el último administrador activo, la operación no se
+    // aplica y devuelve "last-admin"; ninguna secuencia concurrente puede
+    // dejar la base sin administradores. Devuelve "not-found" si no existe.
+    deleteById(idUser: number): Promise<DestructiveOutcome>;
+    deactivateById(idUser: number): Promise<DestructiveOutcome>;
 }
