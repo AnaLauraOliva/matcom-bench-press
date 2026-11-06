@@ -1,4 +1,4 @@
-import type { Gender } from "../../../infrastructure/database/generated/enums.js";
+import type { Gender } from "../../../domain/entities/gender.js";
 import type { Role } from "../../../domain/entities/role.js";
 import type { IFailureOutputBoundary } from '../../boundaries/failure-output-boundary.js'
 import type { IUserResponse } from "../../models/user-response.js";

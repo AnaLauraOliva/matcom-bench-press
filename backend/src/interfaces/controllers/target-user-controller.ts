@@ -6,6 +6,8 @@ import type {
 } from "../http/http-types.js";
 import {
     authenticationRequired,
+    deletedSession,
+    inactiveSession,
     invalidToken,
     validationError,
 } from "../http/http-responses.js";
@@ -16,9 +18,11 @@ import { userIdParamsSchema } from "../validators/user-schemas.js";
 export abstract class TargetUserController implements IHttpController {
     constructor(private readonly sessions: SessionResolver) {}
     async handle(request: IHttpRequest): Promise<IHttpResponse> {
-        const session = this.sessions.resolve(request.authorizationHeader);
+        const session = await this.sessions.resolve(request.authorizationHeader);
         if (session.kind === "anonymous") return authenticationRequired();
         if (session.kind === "invalid") return invalidToken();
+        if (session.kind === "inactive") return inactiveSession();
+        if (session.kind === "deleted") return deletedSession();
         const params = userIdParamsSchema.safeParse(request.params);
         if (!params.success) return validationError(params.error);
         return this.run({ actor: session.actor, targetUserId: params.data.id });

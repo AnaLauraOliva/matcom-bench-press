@@ -1,6 +1,6 @@
 import type { IUser } from "../../../domain/entities/user.js";
 import type { RegistrationPolicy } from "../../../domain/policies/registration-policy.js";
-import { EmailAlreadyExistsError, LocationNotFoundError, RegistrationNotAllowedError } from "../../errors/application-errors.js";
+import { EmailAlreadyExistsError, LocationNotFoundError, RegistrationNotAllowedError, PhoneAlreadyExistsError } from "../../errors/application-errors.js";
 import type { ILocationGateway } from "../../gateways/location-gateway.js";
 import type { IPasswordHashGateway } from "../../gateways/password-hash-gateway.js";
 import type { IUserGateway } from "../../gateways/user-gateway.js";
@@ -38,7 +38,7 @@ export class RegisterUserInteractor implements IRegisterUserInputBoundary {
         try {
             created = await this.users.create({...rest, passwordHash});
         } catch(error){
-            if(error instanceof EmailAlreadyExistsError) {
+            if(error instanceof EmailAlreadyExistsError || error instanceof PhoneAlreadyExistsError) {
                 output.presentFailure(error);
                 return;
             }

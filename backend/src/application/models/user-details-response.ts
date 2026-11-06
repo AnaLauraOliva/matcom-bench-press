@@ -1,4 +1,4 @@
-import type { Gender } from "../../infrastructure/database/generated/enums.js";
+import type { Gender } from "../../domain/entities/gender.js";
 import type { UserProfile } from "../../domain/entities/user-profile.js";
 import { toLocationResponse, type ILocationResponse } from "./location-response.js";
 

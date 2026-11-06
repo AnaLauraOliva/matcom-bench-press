@@ -41,7 +41,7 @@ model Location{
 model User{
   idUser         Int      @id @default(autoincrement()) @map("id_usuario")
   // Para el soft delete hay que poner que phone, name y password sean nulleables
-    phone        String?   @map("telefono")
+    phone        String?   @map("telefono") @unique
     registerDate DateTime @default(now()) @map("fecha_registro") @db.Date
     active       Boolean  @default(true) @map("activo")
     name         String?   @map("nombre")
