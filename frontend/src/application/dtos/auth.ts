@@ -26,17 +26,3 @@ export type LoginResponse = {
 export type RegisterResponse = {
   user: unknown
 }
-
-// Tipo de autenticación
-export type AuthMode = 'login' | 'register'
-
-// 
-export type AuthForm = {
-  name: string
-  email: string
-  phone: string
-  password: string
-  age: string
-  sex: '' | 'FEMENINO' | 'MASCULINO' | 'OTRO'
-  idLocation: string
-}

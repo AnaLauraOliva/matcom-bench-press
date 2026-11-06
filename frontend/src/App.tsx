@@ -1,11 +1,28 @@
-import LandingPage from './pages/LandingPage'
-import AuthModal from './components/auth/AuthModal'
-import { useAuth } from './hooks/useAuth'
+import LandingPage from './presentation/pages/LandingPage'
+import AuthModal from './presentation/components/auth/AuthModal'
+import { useAuth } from './presentation/hooks/useAuth'
 
-import './styles/global.css'
-import './styles/layout.css'
-import './styles/sections.css'
-import './styles/auth.css'
+// Repositorios concretos de infraestructura.
+import { HttpAuthRepository } from './infrastructure/repositories/HttpAuthRepository'
+import { HttpLocationRepository } from './infrastructure/repositories/HttpLocationRepository'
+
+// Casos de uso de la aplicación.
+import { Login } from './application/use-cases/auth/Login'
+import { RegisterClient } from './application/use-cases/auth/RegisterClient'
+import { GetLocations } from './application/use-cases/location/GetLocations'
+
+// Creamos las dependencias una sola vez.
+const authRepository = new HttpAuthRepository()
+const locationRepository = new HttpLocationRepository()
+
+const loginUseCase = new Login(authRepository)
+const registerClientUseCase = new RegisterClient(authRepository)
+const getLocationsUseCase = new GetLocations(locationRepository)
+
+import './presentation/styles/global.css'
+import './presentation/styles/layout.css'
+import './presentation/styles/sections.css'
+import './presentation/styles/auth.css'
 
 function App() {
   const {
@@ -20,7 +37,11 @@ function App() {
     openAuth,
     closeAuth,
     handleSubmit,
-  } = useAuth()
+  } = useAuth({
+    loginUseCase,
+    registerClientUseCase,
+    getLocationsUseCase,
+  })
 
   return (
     <>

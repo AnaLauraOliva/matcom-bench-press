@@ -2,13 +2,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import axios from 'axios'
 
-import { login, register } from '../api/auth'
-import { getLocations } from '../api/locations'
+import type { Login } from '../../application/use-cases/auth/Login'
+import type { RegisterClient } from '../../application/use-cases/auth/RegisterClient'
+import type { GetLocations } from '../../application/use-cases/location/GetLocations'
 
 import type { AuthForm, AuthMode } from '../types/auth'
-import type { Location } from '../types/location'
+import type { Location } from '../../domain/entities/location'
 
-// Estado inicial de los formularios de autenticación.
 const INITIAL_FORM: AuthForm = {
   name: '',
   email: '',
@@ -19,7 +19,17 @@ const INITIAL_FORM: AuthForm = {
   idLocation: '',
 }
 
-export function useAuth() {
+type UseAuthDependencies = {
+  loginUseCase: Login
+  registerClientUseCase: RegisterClient
+  getLocationsUseCase: GetLocations
+}
+
+export function useAuth({
+  loginUseCase,
+  registerClientUseCase,
+  getLocationsUseCase,
+}: UseAuthDependencies) {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null)
   const [form, setForm] = useState<AuthForm>({ ...INITIAL_FORM })
   const [message, setMessage] = useState('')
@@ -29,13 +39,12 @@ export function useAuth() {
   const [isLoadingLocations, setIsLoadingLocations] = useState(false)
   const [locationsError, setLocationsError] = useState('')
 
-  // Carga las sedes disponibles al inicializar el hook.
   useEffect(() => {
     async function loadLocations() {
       try {
         setIsLoadingLocations(true)
 
-        const data = await getLocations()
+        const data = await getLocationsUseCase.execute()
         setLocations(data)
       } catch (error) {
         console.error('Error al cargar las sedes:', error)
@@ -48,9 +57,8 @@ export function useAuth() {
     }
 
     loadLocations()
-  }, [])
+  }, [getLocationsUseCase])
 
-  // Actualiza un campo específico del formulario.
   function handleFormChange(field: keyof AuthForm, value: string) {
     setForm((currentForm) => ({
       ...currentForm,
@@ -58,20 +66,17 @@ export function useAuth() {
     }))
   }
 
-  // Abre el modal y prepara un formulario limpio.
   function openAuth(mode: AuthMode) {
     setAuthMode(mode)
     setForm({ ...INITIAL_FORM })
     setMessage('')
   }
 
-  // Cierra el modal y limpia los mensajes.
   function closeAuth() {
     setAuthMode(null)
     setMessage('')
   }
 
-  // Procesa el inicio de sesión o el registro.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setMessage('')
@@ -90,7 +95,7 @@ export function useAuth() {
 
     try {
       if (authMode === 'login') {
-        const result = await login({
+        const result = await loginUseCase.execute({
           email: form.email.trim(),
           password: form.password,
         })
@@ -100,7 +105,7 @@ export function useAuth() {
 
         setMessage('Inicio de sesión correcto.')
       } else if (authMode === 'register') {
-        await register({
+        await registerClientUseCase.execute({
           name: form.name.trim(),
           email: form.email.trim(),
           phone: form.phone.trim(),

@@ -2,7 +2,7 @@ import { ArrowRight, Dumbbell, X } from 'lucide-react'
 import type { FormEvent } from 'react'
 import CustomSelect from '../common/CustomSelect'
 import AgeInput from '../common/AgeInput'
-import type { Location } from '../../types/location'
+import type { Location } from '../../../domain/entities/Location'
 import type { AuthForm, AuthMode } from '../../types/auth'
 
 type AuthModalProps = {

@@ -1,11 +1,10 @@
 import axios from 'axios'
 
-// Instancia centralizada para todas las peticiones al backend.
-const api = axios.create({
+const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-export default api
+export default apiClient
