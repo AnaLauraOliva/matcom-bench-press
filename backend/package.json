@@ -4,13 +4,14 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/interfaces/http/server.ts",
+    "dev": "tsx watch src/config/main.ts",
     "build": "tsc",
-    "start": "node dist/index.ts",
+    "start": "node dist/config/main.js",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "prisma:seed": "prisma db seed",
     "postinstall": "prisma generate"
   },
   "keywords": [],

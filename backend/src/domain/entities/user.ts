@@ -1,5 +1,5 @@
 import type { Role } from "./role.js";
-import type { Sex } from "./sex.js";
+import type { Gender } from "./gender.js";
 
 export interface IUser {
     readonly idUser: number;
@@ -12,7 +12,14 @@ export interface IUser {
     readonly role: Role;
 }
 
-interface IBaseNewUserData {
+// Al borrar (soft delete) el email se reescribe como "deleted{id}".
+// Con este marcador se distingue un usuario ELIMINADO de uno solo DESACTIVADO.
+const DELETED_EMAIL_PATTERN = /^deleted\d+$/;
+export function isDeletedUserEmail(email: string): boolean {
+    return DELETED_EMAIL_PATTERN.test(email);
+}
+
+interface INewUserBase {
     readonly phone: string;
     readonly name: string;
     readonly email: string;
@@ -20,14 +27,14 @@ interface IBaseNewUserData {
 }
 //unión disciminada por roles
 export type NewUser = 
-    | (IBaseNewUserData & {
+    | (INewUserBase & {
         readonly role: 'CLIENT';
         readonly age: number;
-        readonly sex: Sex;
+        readonly gender: Gender;
         readonly idLocation: number;
     })
-    | (IBaseNewUserData &{readonly role: 'ADMIN'})
-    | (IBaseNewUserData &{
+    | (INewUserBase &{readonly role: 'ADMIN'})
+    | (INewUserBase &{
         readonly role: 'TRAINER' | 'HEAD_TRAINER';
         readonly specialty: string;
     });
