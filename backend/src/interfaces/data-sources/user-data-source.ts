@@ -38,7 +38,6 @@ export type NewUserRecord = INewUserRecordBase &
 // Acceso al almacenamiento de usuarios (lo implementa la capa de frameworks).
 export interface IUserDataSource {
     findByEmail(email: string): Promise<IUserRecord | null>;
-    findByName(name: string): Promise<IUserRecord[]>;
     // Lanza EmailAlreadyExistsError si el email ya existe o PhoneAlreadyExists si el teléfono ya existe.
     insert(record: NewUserRecord): Promise<IUserRecord>;
 }

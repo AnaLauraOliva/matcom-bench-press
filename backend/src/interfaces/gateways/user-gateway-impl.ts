@@ -70,10 +70,6 @@ export class UserGatewayImpl implements IUserGateway {
         const record = await this.dataSource.findByEmail(email);
         return record ? toUser(record) : null;
     }
-    async findByName(name: string): Promise<IUser[]> {
-        const records = await this.dataSource.findByName(name);
-        return records.map(toUser);
-    }
     async create(newUser: NewUser): Promise<IUser> {
         const record = await this.dataSource.insert(toNewUserRecord(newUser));
         return toUser(record);

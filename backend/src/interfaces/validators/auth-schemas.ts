@@ -9,16 +9,11 @@ const newPassword = z
 
 export const loginSchema = z
     .object({
-        email: email.optional(),
-        name: z
-            .string()
-            .trim()
-            .min(1, "El nombre no puede estar vacío")
-            .optional(),
+        email: email,
         password: z.string().min(1, "La contraseña es obligatoria"),
     })
-    .refine((data) => data.email !== undefined || data.name !== undefined, {
-        message: 'Debes enviar "email" o "nombre"',
+    .refine((data) => data.email !== undefined, {
+        message: 'Debes enviar "email"',
         path: ["email"],
     });
 

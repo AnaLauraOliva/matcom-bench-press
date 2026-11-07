@@ -100,13 +100,6 @@ export class PrismaUserDataSource implements IUserDataSource {
         });
         return row ? toRecord(row) : null;
     }
-    async findByName(name: string): Promise<IUserRecord[]> {
-        const rows = await this.prisma.user.findMany({
-            where: { name },
-            include: INCLUDE_ROLE_TABLES,
-        });
-        return rows.map(toRecord);
-    }
     async insert(record: NewUserRecord): Promise<IUserRecord> {
         try {
             const row = await this.prisma.user.create({

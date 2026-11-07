@@ -16,13 +16,6 @@ export class InvalidCredentialsError extends ApplicationError{
     }
 }
 
-export class AmbiguousNameError extends ApplicationError{
-    readonly code = 'AMBIGUOUS_NAME';
-    constructor() {
-        super('Existen varios usuarios con ese nombre. Inicie sesión con su email.');
-    }
-}
-
 export class InactiveUserError extends ApplicationError{
     readonly code = 'INACTIVE_USER';
     constructor() {

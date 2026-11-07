@@ -1,7 +1,7 @@
 import type { IFailureOutputBoundary } from "../../boundaries/failure-output-boundary.js";
 import type { IUserResponse } from "../../models/user-response.js";
 
-export type LoginIdentifier = { readonly email: string} | { readonly name: string };
+export type LoginIdentifier = { readonly email: string};
 
 export interface ILoginRequest {
     readonly identifier: LoginIdentifier;
