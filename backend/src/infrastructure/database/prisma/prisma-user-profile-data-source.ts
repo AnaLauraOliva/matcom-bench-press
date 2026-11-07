@@ -1,10 +1,10 @@
-import { Prisma } from "./generated/client.js";
-import type { Gender } from "../../domain/entities/gender.js";
-import type { DestructiveOutcome } from "../../application/gateways/user-profile-gateway.js";
+import { Prisma } from "../generated/client.js";
+import type { Gender } from "../../../domain/entities/gender.js";
+import type { DestructiveOutcome } from "../../../application/gateways/user-profile-gateway.js";
 import type {
     IUserProfileDataSource,
     IUserProfileRecord,
-} from "../../interfaces/data-sources/user-profile-data-source.js";
+} from "../../../interfaces/data-sources/user-profile-data-source.js";
 import type { PrismaClient } from "./prisma-client.js";
 // "Trae el usuario con su tabla de rol y, si es cliente, también su sede".
 const INCLUDE_PROFILE = {

@@ -1,7 +1,7 @@
 // Creación del cliente de prisma
 
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "./generated/client.js";
+import { PrismaClient } from "../generated/client.js";
 
 export type { PrismaClient };
 
