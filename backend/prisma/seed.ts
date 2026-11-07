@@ -2,8 +2,8 @@
 
 import 'dotenv/config'
 import { createPrismaClient } from '../src/infrastructure/database/prisma-client.js'
-import { Sex, Type } from '../src/infrastructure/database/generated/enums.js'
-import { BcryptPasswordHasher } from '../src/infrastructure/security/bcrypt-password-hasher.js'
+import { Gender, Type } from '../src/infrastructure/database/generated/enums.js'
+import { BcryptPasswordHashGateway } from '../src/interfaces/gateways/bcrypt-password-hash-gateway.js'
 
 function required(name: string): string {
     const value = process.env[name]
@@ -83,7 +83,7 @@ async function seedLocations(){
 
 async function seedUsers(){
     if (await prisma.user.count() === 0) {
-        const hasher = new BcryptPasswordHasher(12);
+        const hasher = new BcryptPasswordHashGateway(12);
         const password = await hasher.hash('WeWillRockYou2026!')
         await prisma.user.createMany({
             data:[
@@ -115,11 +115,11 @@ async function seedAdmins() {
     if(await prisma.admin.count()>0) return;
     await prisma.admin.createMany({
         data: [
-            {idUser:1},
-            {idUser:2},
-            {idUser:3},
-            {idUser:4},
-            {idUser:5},
+            {idAdmin:1},
+            {idAdmin:2},
+            {idAdmin:3},
+            {idAdmin:4},
+            {idAdmin:5},
         ],
         skipDuplicates:true,
     })
@@ -131,9 +131,9 @@ async function seedTrainers(){
     if(await prisma.trainer.count()>0) return;
     await prisma.trainer.createMany({
         data:[
-            {idUser:6, specialty:"Fuerza e hipertrofia"},
-            {idUser:7, specialty:"Acondicionamiento físico"},
-            {idUser:8, specialty:"Movilidad y flexibilidad"},
+            {idTrainer:6, specialty:"Fuerza e hipertrofia"},
+            {idTrainer:7, specialty:"Acondicionamiento físico"},
+            {idTrainer:8, specialty:"Movilidad y flexibilidad"},
         ],
         skipDuplicates:true,
     });
@@ -145,7 +145,7 @@ async function seedHeadTrainer(){
     if(await prisma.headTrainer.count()>0) return;
     await prisma.headTrainer.createMany({
         data:[
-            {idUser:6},
+            {idHeadTrainer:6},
         ],
         skipDuplicates:true,
     });
@@ -157,9 +157,9 @@ async function seedClients(){
     if(await prisma.client.count()>0) return;
     await prisma.client.createMany({
         data:[
-            {idUser:9 , age:23, sex:Sex.MASCULINO, idLocation:1},
-            {idUser:10, age:24, sex:Sex.MASCULINO, idLocation:1},
-            {idUser:11, age:20, sex:Sex.MASCULINO, idLocation:2},
+            {idClient:9 , age:23, gender:Gender.MASCULINO, idLocation:1},
+            {idClient:10, age:24, gender:Gender.MASCULINO, idLocation:1},
+            {idClient:11, age:20, gender:Gender.MASCULINO, idLocation:2},
         ],
         skipDuplicates:true,
     });
