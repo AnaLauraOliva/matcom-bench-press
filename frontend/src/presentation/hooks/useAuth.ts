@@ -1,4 +1,3 @@
-
 import { useEffect, useState, type FormEvent } from 'react'
 import axios from 'axios'
 
@@ -17,7 +16,7 @@ const INITIAL_FORM: AuthForm = {
   phone: '',
   password: '',
   age: '',
-  sex: '',
+  gender: '',
   idLocation: '',
 }
 
@@ -38,6 +37,7 @@ export function useAuth({
   const [form, setForm] = useState<AuthForm>({ ...INITIAL_FORM })
   const [message, setMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [registrationCompleted, setRegistrationCompleted] = useState(false)
 
   const [locations, setLocations] = useState<Location[]>([])
   const [isLoadingLocations, setIsLoadingLocations] = useState(false)
@@ -47,7 +47,6 @@ export function useAuth({
     async function loadLocations() {
       try {
         setIsLoadingLocations(true)
-
         const data = await getLocationsUseCase.execute()
         setLocations(data)
       } catch (error) {
@@ -74,18 +73,20 @@ export function useAuth({
     setAuthMode(mode)
     setForm({ ...INITIAL_FORM })
     setMessage('')
+    setRegistrationCompleted(false)
   }
 
   function closeAuth() {
     setAuthMode(null)
     setMessage('')
+    setRegistrationCompleted(false)
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setMessage('')
 
-    if (authMode === 'register' && !form.sex) {
+    if (authMode === 'register' && !form.gender) {
       setMessage('Selecciona una opción de género.')
       return
     }
@@ -99,16 +100,13 @@ export function useAuth({
 
     try {
       if (authMode === 'login') {
-        const result = await loginUseCase.execute({
+        const session = await loginUseCase.execute({
           email: form.email.trim(),
           password: form.password,
         })
-        
-        setMessage('Inicio de sesión correcto.')
 
-        // Guardamos la sesión y notificamos al componente principal.
-        onLoginSuccess(result)
-
+        onLoginSuccess(session)
+        closeAuth()
       } else if (authMode === 'register') {
         await registerClientUseCase.execute({
           name: form.name.trim(),
@@ -117,25 +115,53 @@ export function useAuth({
           password: form.password,
           role: 'CLIENT',
           age: Number(form.age),
-          sex: form.sex as 'FEMENINO' | 'MASCULINO' | 'OTRO',
+          gender: form.gender as 'FEMENINO' | 'MASCULINO' | 'OTRO',
           idLocation: Number(form.idLocation),
         })
 
-        setMessage('Registro completado correctamente.')
+        setRegistrationCompleted(true)
       }
     } catch (error: unknown) {
-      if (
-        axios.isAxiosError<{
-          error?: { code?: string; message?: string }
-        }>(error)
-      ) {
+      console.error('Error durante la autenticación:', error)
+
+      if (axios.isAxiosError(error)) {
+        console.error('Respuesta del servidor:', error.response?.data)
+        console.error('Código HTTP:', error.response?.status)
+
         setMessage(
           error.response?.data?.error?.message ??
-            'No se pudo completar la operación. Comprueba los datos y la conexión con el servidor.',
+            'No se pudo completar la operación.',
         )
+      } else if (error instanceof Error) {
+        console.error('Mensaje:', error.message)
+        setMessage(error.message)
       } else {
         setMessage('Ocurrió un error inesperado.')
       }
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Inicia sesión después de que el usuario elija ir a su panel.
+  async function handleGoToPanel() {
+    setIsSubmitting(true)
+    setMessage('')
+
+    try {
+      const session = await loginUseCase.execute({
+        email: form.email.trim(),
+        password: form.password,
+      })
+
+      onLoginSuccess(session)
+      closeAuth()
+    } catch (error) {
+      console.error('Error al iniciar sesión automáticamente:', error)
+
+      setMessage(
+        'Tu cuenta fue creada, pero no pudimos iniciar sesión automáticamente. Inténtalo desde el inicio de sesión.',
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -146,6 +172,7 @@ export function useAuth({
     form,
     message,
     isSubmitting,
+    registrationCompleted,
     locations,
     isLoadingLocations,
     locationsError,
@@ -153,5 +180,6 @@ export function useAuth({
     openAuth,
     closeAuth,
     handleSubmit,
+    handleGoToPanel,
   }
 }

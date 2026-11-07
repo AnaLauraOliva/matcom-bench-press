@@ -8,6 +8,6 @@ export type AuthForm = {
   phone: string
   password: string
   age: string
-  sex: '' | 'FEMENINO' | 'MASCULINO' | 'OTRO'
+  gender: '' | 'FEMENINO' | 'MASCULINO' | 'OTRO'
   idLocation: string
 }

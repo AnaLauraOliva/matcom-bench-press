@@ -36,7 +36,7 @@ export type RegisterClientData = {
   password: string
   role: 'CLIENT'
   age: number
-  sex: 'FEMENINO' | 'MASCULINO' | 'OTRO'
+  gender: 'FEMENINO' | 'MASCULINO' | 'OTRO'
   idLocation: number
 }
 

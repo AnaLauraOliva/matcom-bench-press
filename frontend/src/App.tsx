@@ -49,6 +49,7 @@ function AppContent() {
     form,
     message,
     isSubmitting,
+    registrationCompleted,
     locations,
     isLoadingLocations,
     locationsError,
@@ -56,6 +57,7 @@ function AppContent() {
     openAuth,
     closeAuth,
     handleSubmit,
+    handleGoToPanel,
   } = useAuth({
     loginUseCase,
     registerClientUseCase,
@@ -87,8 +89,11 @@ function AppContent() {
               locationsError={locationsError}
               message={message}
               isSubmitting={isSubmitting}
+              registrationCompleted={registrationCompleted}
               onClose={closeAuth}
               onSubmit={handleSubmit}
+              onGoToPanel={handleGoToPanel}
+              onContinueLater={closeAuth}
               onSwitchMode={() =>
                 openAuth(authMode === 'register' ? 'login' : 'register')
               }
