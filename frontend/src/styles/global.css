@@ -1,0 +1,129 @@
+/* Variables, estilos base y elementos compartidos */
+
+
+/* Variables globales del sistema de diseño */
+:root {
+--primary: #004c4c;
+  --accent: #00a699;
+  --aqua: #b2d8d8;
+  --surface: #ffffff;
+  --page: #f5f5f5;
+  --muted: #5d7474;
+  --border: #dce8e7;
+}
+
+
+/* Contenedor principal de la aplicación */
+.app {
+min-height: 100vh;
+  overflow: hidden;
+  color: var(--primary);
+}
+
+
+.button {
+display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 12px 19px;
+  font: inherit;
+  font-size: 0.93rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.button:hover:not(:disabled) {
+transform: translateY(-2px);
+}
+
+
+.button:focus-visible,
+.navigation a:focus-visible,
+.text-link:focus-visible,
+.feature-link:focus-visible {
+outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+
+
+.button:disabled {
+cursor: not-allowed;
+  opacity: 0.7;
+}
+
+
+.button-primary {
+color: white;
+  background: var(--primary);
+  box-shadow: 0 6px 16px rgb(0 76 76 / 12%);
+}
+
+
+.button-primary:hover:not(:disabled) {
+background: #00615e;
+  box-shadow: 0 9px 22px rgb(0 76 76 / 17%);
+}
+
+
+.button-outline {
+color: var(--primary);
+  background: transparent;
+  border-color: #c6d9d7;
+}
+
+
+.button-outline:hover {
+background: white;
+}
+
+
+.button-large {
+min-height: 52px;
+  padding: 14px 22px;
+}
+
+
+.button-light {
+color: var(--primary);
+  background: white;
+  flex-shrink: 0;
+}
+
+
+.button-light:hover {
+background: var(--page);
+}
+
+
+.footer-status {
+font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+
+@media (max-width: 420px) {
+.hero-actions .button {
+width: 100%;
+}
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+*,
+  *::before,
+  *::after {
+scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+}
+}
