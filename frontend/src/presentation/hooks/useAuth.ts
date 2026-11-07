@@ -7,7 +7,9 @@ import type { RegisterClient } from '../../application/use-cases/auth/RegisterCl
 import type { GetLocations } from '../../application/use-cases/location/GetLocations'
 
 import type { AuthForm, AuthMode } from '../types/auth'
-import type { Location } from '../../domain/entities/location'
+import type { Location } from '../../domain/entities/Location'
+
+import type { AuthSession } from '../../application/dtos/auth'
 
 const INITIAL_FORM: AuthForm = {
   name: '',
@@ -23,12 +25,14 @@ type UseAuthDependencies = {
   loginUseCase: Login
   registerClientUseCase: RegisterClient
   getLocationsUseCase: GetLocations
+  onLoginSuccess: (session: AuthSession) => void
 }
 
 export function useAuth({
   loginUseCase,
   registerClientUseCase,
   getLocationsUseCase,
+  onLoginSuccess,
 }: UseAuthDependencies) {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null)
   const [form, setForm] = useState<AuthForm>({ ...INITIAL_FORM })
@@ -99,11 +103,12 @@ export function useAuth({
           email: form.email.trim(),
           password: form.password,
         })
-
-        // TODO: integrar el token y los datos del usuario.
-        console.log('Usuario autenticado:', result.user)
-
+        
         setMessage('Inicio de sesión correcto.')
+
+        // Guardamos la sesión y notificamos al componente principal.
+        onLoginSuccess(result)
+
       } else if (authMode === 'register') {
         await registerClientUseCase.execute({
           name: form.name.trim(),
