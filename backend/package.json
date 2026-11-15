@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/config/main.js",
     "typecheck": "tsc --noEmit",
+    "mongo:seed": "tsx scripts/seed-mongo.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
