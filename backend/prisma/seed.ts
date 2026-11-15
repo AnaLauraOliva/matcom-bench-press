@@ -1,7 +1,7 @@
 // Datos iniciales de la base de datos
 
 import 'dotenv/config'
-import { createPrismaClient } from '../src/infrastructure/database/prisma-client.js'
+import { createPrismaClient } from '../src/infrastructure/database/prisma/prisma-client.js'
 import { Gender, Type } from '../src/infrastructure/database/generated/enums.js'
 import { BcryptPasswordHashGateway } from '../src/interfaces/gateways/bcrypt-password-hash-gateway.js'
 
