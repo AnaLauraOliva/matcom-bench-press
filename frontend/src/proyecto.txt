@@ -1,0 +1,3229 @@
+==> ./App.tsx <==
+import { BrowserRouter, useNavigate } from 'react-router'
+
+import LandingPage from './presentation/pages/LandingPage'
+import AuthModal from './presentation/components/auth/AuthModal'
+
+import { useAuth } from './presentation/hooks/useAuth'
+import { AuthSessionProvider } from './presentation/contexts/AuthSessionContext'
+import { useAuthSession } from './presentation/contexts/useAuthSession'
+
+import AppRouter from './presentation/routes/AppRouter'
+import { getRolePath } from './presentation/routes/rolePaths'
+
+// Repositorios concretos de infraestructura.
+import { HttpAuthRepository } from './infrastructure/repositories/HttpAuthRepository'
+import { HttpLocationRepository } from './infrastructure/repositories/HttpLocationRepository'
+import { LocalStorageSessionRepository } from './infrastructure/repositories/LocalStorageSessionRepository'
+
+// Casos de uso de la aplicación.
+import { Login } from './application/use-cases/auth/Login'
+import { RegisterClient } from './application/use-cases/auth/RegisterClient'
+import { GetLocations } from './application/use-cases/location/GetLocations'
+
+// Creamos las dependencias una sola vez.
+const authRepository = new HttpAuthRepository()
+const locationRepository = new HttpLocationRepository()
+const sessionRepository = new LocalStorageSessionRepository()
+
+const loginUseCase = new Login(authRepository)
+const registerClientUseCase = new RegisterClient(authRepository)
+const getLocationsUseCase = new GetLocations(locationRepository)
+
+// Estilos globales.
+import './presentation/styles/global.css'
+import './presentation/styles/layout.css'
+import './presentation/styles/sections.css'
+import './presentation/styles/auth.css'
+
+/**
+ * Contiene la interfaz y la lógica de autenticación.
+ * Se renderiza dentro de BrowserRouter y AuthSessionProvider.
+ */
+function AppContent() {
+  const navigate = useNavigate()
+  const { setSession } = useAuthSession()
+
+  // Gestiona el formulario de login y registro.
+  const {
+    authMode,
+    form,
+    message,
+    isSubmitting,
+    registrationCompleted,
+    locations,
+    isLoadingLocations,
+    locationsError,
+    handleFormChange,
+    openAuth,
+    closeAuth,
+    handleSubmit,
+    handleGoToPanel,
+  } = useAuth({
+    loginUseCase,
+    registerClientUseCase,
+    getLocationsUseCase,
+
+    // Guarda la sesión y redirige según el rol.
+    onLoginSuccess: (session) => {
+      setSession(session)
+      console.log('Usuario autenticado:', session.user)
+      console.log('Rol recibido:', session.user.role)
+      navigate(getRolePath(session.user.role), {
+        replace: true,
+      })
+    },
+  })
+
+  return (
+    <AppRouter
+      homePage={
+        <>
+          <LandingPage onOpenAuth={openAuth} />
+
+          {authMode && (
+            <AuthModal
+              mode={authMode}
+              form={form}
+              locations={locations}
+              isLoadingLocations={isLoadingLocations}
+              locationsError={locationsError}
+              message={message}
+              isSubmitting={isSubmitting}
+              registrationCompleted={registrationCompleted}
+              onClose={closeAuth}
+              onSubmit={handleSubmit}
+              onGoToPanel={handleGoToPanel}
+              onContinueLater={closeAuth}
+              onSwitchMode={() =>
+                openAuth(authMode === 'register' ? 'login' : 'register')
+              }
+              onFormChange={handleFormChange}
+            />
+          )}
+        </>
+      }
+    />
+  )
+}
+
+/**
+ * Componente raíz de la aplicación.
+ * Proporciona el enrutador y el contexto de autenticación.
+ */
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthSessionProvider sessionRepository={sessionRepository}>
+        <AppContent />
+      </AuthSessionProvider>
+    </BrowserRouter>
+  )
+}
+
+export default App
+==> ./application/dtos/auth.ts <==
+// Datos necesarios para iniciar sesión.
+export type LoginData = {
+  email: string
+  password: string
+}
+
+// Roles definidos por el backend.
+export type UserRole =
+  | 'ADMIN'
+  | 'TRAINER'
+  | 'HEAD_TRAINER'
+  | 'CLIENT'
+
+// Información pública del usuario autenticado.
+export type AuthenticatedUser = {
+  id: number
+  name: string
+  email: string
+  phone: string
+  role: UserRole
+  active: boolean
+  registerDate: string
+}
+
+// Respuesta del endpoint de login
+export type LoginResponse = {
+  token: string
+  user: AuthenticatedUser
+}
+
+// Datos necesarios para registrar un cliente.
+export type RegisterClientData = {
+  name: string
+  email: string
+  phone: string
+  password: string
+  role: 'CLIENT'
+  age: number
+  gender: 'FEMENINO' | 'MASCULINO' | 'OTRO'
+  idLocation: number
+}
+
+// Respuesta que devuelve el backend al registrar un usuario.
+// Se mantiene unknown hasta comprobar su estructura definitiva.
+export type RegisterResponse = {
+  user: unknown
+}
+
+// Información completa de una sesión autenticada.
+export type AuthSession = {
+  token: string
+  user: AuthenticatedUser
+}
+==> ./application/ports/AuthRepository.ts <==
+import type {
+  LoginData,
+  LoginResponse,
+  RegisterClientData,
+  RegisterResponse,
+} from '../dtos/auth'
+
+export interface AuthRepository {
+  login(data: LoginData): Promise<LoginResponse>
+
+  register(data: RegisterClientData): Promise<RegisterResponse>
+}
+==> ./application/ports/ClientRespository.ts <==
+
+==> ./application/ports/LocationRepository.ts <==
+import type { Location } from '../../domain/entities/Location'
+
+export interface LocationRepository {
+  getAll(): Promise<Location[]>
+}
+==> ./application/ports/SessionRepository.ts <==
+import type { AuthSession } from '../dtos/auth'
+
+/**
+ * Define las operaciones necesarias para gestionar una sesión.
+ */
+export interface SessionRepository {
+  getSession(): AuthSession | null
+
+  saveSession(session: AuthSession): void
+
+  clearSession(): void
+}
+==> ./application/use-cases/auth/Login.ts <==
+import type { AuthRepository } from '../../ports/AuthRepository'
+import type { LoginData, LoginResponse } from '../../dtos/auth'
+
+export class Login {
+  private readonly authRepository: AuthRepository
+
+  constructor(authRepository: AuthRepository) {
+    this.authRepository = authRepository
+  }
+
+  execute(data: LoginData): Promise<LoginResponse> {
+    return this.authRepository.login(data)
+  }
+}
+==> ./application/use-cases/auth/RegisterClient.ts <==
+import type { AuthRepository } from '../../ports/AuthRepository'
+import type {
+  RegisterClientData,
+  RegisterResponse,
+} from '../../dtos/auth'
+
+export class RegisterClient {
+  private readonly authRepository: AuthRepository
+
+  constructor(authRepository: AuthRepository) {
+    this.authRepository = authRepository
+  }
+
+  execute(data: RegisterClientData): Promise<RegisterResponse> {
+    return this.authRepository.register(data)
+  }
+}
+==> ./application/use-cases/client/DesactivateAccount.ts <==
+
+==> ./application/use-cases/client/GetClientProfile.ts <==
+
+==> ./application/use-cases/location/GetLocations.ts <==
+import type { LocationRepository } from '../../ports/LocationRepository'
+import type { Location } from '../../../domain/entities/Location'
+
+export class GetLocations {
+  private readonly locationRepository: LocationRepository
+
+  constructor(locationRepository: LocationRepository) {
+    this.locationRepository = locationRepository
+  }
+
+  execute(): Promise<Location[]> {
+    return this.locationRepository.getAll()
+  }
+}
+==> ./domain/entities/ClientProfile.ts <==
+
+==> ./domain/entities/Location.ts <==
+// Representa una sede del gimnasio.
+export type Location = {
+  idLocation: number
+  name: string
+}
+==> ./index.css <==
+
+@import "tailwindcss";
+
+:root {
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  color: #004c4c;
+  background: #f5f5f5;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  font-optical-sizing: auto;
+  font-weight: 400;
+  scroll-behavior: smooth;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+body,
+button,
+input {
+  font-family: inherit;
+}
+
+button,
+input {
+  font-size: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  color: #ffffff;
+  background: #008f83;
+}
+
+==> ./infrastructure/http/apiClient.ts <==
+import axios from 'axios'
+import { AUTH_SESSION_KEY } from '../repositories/LocalStorageSessionRepository'
+
+const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+// Añadimos automáticamente el token a las peticiones autenticadas.
+apiClient.interceptors.request.use((config) => {
+  const storedSession = localStorage.getItem(AUTH_SESSION_KEY)
+
+  if (storedSession) {
+    try {
+      const session = JSON.parse(storedSession) as { token: string }
+
+      config.headers.Authorization = `Bearer ${session.token}`
+    } catch (error) {
+      console.error('No se pudo recuperar el token:', error)
+    }
+  }
+
+  return config
+})
+
+export default apiClient
+==> ./infrastructure/repositories/HttpAuthRepository.ts <==
+import apiClient from '../http/apiClient'
+
+import type { AuthRepository } from '../../application/ports/AuthRepository'
+
+import type {
+  LoginData,
+  LoginResponse,
+  RegisterClientData,
+  RegisterResponse,
+} from '../../application/dtos/auth'
+
+export class HttpAuthRepository implements AuthRepository {
+  async login(data: LoginData): Promise<LoginResponse> {
+    const response = await apiClient.post('/auth/login', data)
+
+    return response.data as LoginResponse
+  }
+
+  async register(data: RegisterClientData): Promise<RegisterResponse> {
+    const response = await apiClient.post('/auth/register', data)
+
+    return response.data as RegisterResponse
+  }
+}
+==> ./infrastructure/repositories/HttpClientRepository.ts <==
+
+==> ./infrastructure/repositories/HttpLocationRepository.ts <==
+import apiClient from '../http/apiClient'
+
+import type { LocationRepository } from '../../application/ports/LocationRepository'
+import type { Location } from '../../domain/entities/Location'
+
+export class HttpLocationRepository implements LocationRepository {
+  async getAll(): Promise<Location[]> {
+    const response = await apiClient.get('/locations')
+
+    return response.data.locations as Location[]
+  }
+}
+==> ./infrastructure/repositories/LocalStorageSessionRepository.ts <==
+import type { SessionRepository } from '../../application/ports/SessionRepository'
+import type { AuthSession } from '../../application/dtos/auth'
+
+// Clave única utilizada para guardar la sesión.
+export const AUTH_SESSION_KEY = 'matcom_auth_session'
+
+/**
+ * Implementa la persistencia de la sesión utilizando localStorage.
+ */
+export class LocalStorageSessionRepository implements SessionRepository {
+  /**
+   * Recupera la sesión almacenada.
+   * Si no existe o está dañada, devuelve null.
+   */
+  getSession(): AuthSession | null {
+    try {
+      const storedSession = localStorage.getItem(AUTH_SESSION_KEY)
+
+      if (!storedSession) {
+        return null
+      }
+
+      return JSON.parse(storedSession) as AuthSession
+    } catch (error) {
+      console.error('No se pudo recuperar la sesión:', error)
+
+      this.clearSession()
+      return null
+    }
+  }
+
+  /**
+   * Guarda el token y los datos del usuario.
+   */
+  saveSession(session: AuthSession): void {
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session))
+  }
+
+  /**
+   * Elimina la sesión almacenada.
+   */
+  clearSession(): void {
+    localStorage.removeItem(AUTH_SESSION_KEY)
+  }
+}
+==> ./main.tsx <==
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)
+
+==> ./presentation/components/auth/AuthModal.tsx <==
+import { ArrowRight, Dumbbell, X } from 'lucide-react'
+import type { FormEvent } from 'react'
+import CustomSelect from '../common/CustomSelect'
+import AgeInput from '../common/AgeInput'
+import type { Location } from '../../../domain/entities/Location'
+import type { AuthForm, AuthMode } from '../../types/auth'
+
+type AuthModalProps = {
+  mode: AuthMode
+  form: AuthForm
+  locations: Location[]
+  isLoadingLocations: boolean
+  locationsError: string
+  message: string
+  isSubmitting: boolean
+  registrationCompleted: boolean
+  onClose: () => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  onSwitchMode: () => void
+  onFormChange: (field: keyof AuthForm, value: string) => void
+  onGoToPanel: () => void
+  onContinueLater: () => void
+}
+
+function AuthModal({
+  mode,
+  form,
+  locations,
+  isLoadingLocations,
+  locationsError,
+  message,
+  isSubmitting,
+  registrationCompleted,
+  onClose,
+  onSubmit,
+  onSwitchMode,
+  onFormChange,
+  onGoToPanel,
+  onContinueLater,
+}: AuthModalProps) {
+  const isRegister = mode === 'register'
+
+  return (
+    <div
+      className="modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <section
+        className="auth-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-title"
+      >
+        <button
+          className="modal-close"
+          type="button"
+          aria-label="Cerrar formulario"
+          onClick={onClose}
+        >
+          <X size={22} />
+        </button>
+
+        <span className="auth-logo">
+          <Dumbbell size={25} />
+        </span>
+
+        {registrationCompleted ? (
+          <div className="auth-success">
+            <span className="section-label">
+              REGISTRO COMPLETADO
+            </span>
+
+            <h2 id="auth-title">¡Bienvenido a MatCom!</h2>
+
+            <p className="auth-subtitle">
+              Tu cuenta ha sido creada correctamente.
+              ¿Deseas acceder ahora a tu panel de entrenamiento?
+            </p>
+
+            {message && (
+              <p className="form-message" role="alert">
+                {message}
+              </p>
+            )}
+
+            <div className="auth-success-actions">
+              <button
+                className="button button-primary auth-submit"
+                type="button"
+                onClick={onGoToPanel}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Accediendo...' : 'Ir a mi panel'}
+                {!isSubmitting && <ArrowRight size={18} />}
+              </button>
+
+              <button
+                className="button button-secondary auth-submit"
+                type="button"
+                onClick={onContinueLater}
+                disabled={isSubmitting}
+              >
+                Continuar más tarde
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <span className="section-label">
+              {isRegister ? 'ÚNETE A MATCOM BENCH PRESS' : '¡QUÉ BUENO VERTE!'}
+            </span>
+
+            <h2 id="auth-title">
+              {isRegister ? 'Crea tu cuenta' : 'Inicia sesión'}
+            </h2>
+
+            <p className="auth-subtitle">
+              {isRegister
+                ? 'Prepara el camino para tu próximo objetivo.'
+                : 'Accede a tu espacio de entrenamiento.'}
+            </p>
+
+            <form className="auth-form" onSubmit={onSubmit}>
+              {isRegister && (
+                <>
+                  <label>
+                    Nombre completo
+                    <input
+                      type="text"
+                      name="name"
+                      autoComplete="name"
+                      value={form.name}
+                      onChange={(event) =>
+                        onFormChange('name', event.target.value)
+                      }
+                      maxLength={100}
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Teléfono
+                    <input
+                      type="tel"
+                      name="phone"
+                      autoComplete="tel"
+                      inputMode="numeric"
+                      value={form.phone}
+                      onChange={(event) =>
+                        onFormChange(
+                          'phone',
+                          event.target.value.replace(/\D/g, ''),
+                        )
+                      }
+                      maxLength={30}
+                      pattern="[0-9]+"
+                      title="Introduce el teléfono usando solo números."
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Edad
+                    <AgeInput
+                      value={form.age}
+                      onChange={(value) => onFormChange('age', value)}
+                    />
+                  </label>
+
+                  <label>
+                    Género
+                    <CustomSelect
+                      value={form.gender}
+                      placeholder="Selecciona una opción"
+                      options={[
+                        { value: 'FEMENINO', label: 'Femenino' },
+                        { value: 'MASCULINO', label: 'Masculino' },
+                        { value: 'OTRO', label: 'Otro' },
+                      ]}
+                      onChange={(value) => onFormChange('gender', value)}
+                    />
+                  </label>
+
+                  <label>
+                    Sede del gimnasio
+                    <CustomSelect
+                      value={form.idLocation}
+                      placeholder={
+                        isLoadingLocations
+                          ? 'Cargando sedes...'
+                          : locationsError
+                            ? 'Sedes no disponibles'
+                            : 'Selecciona una sede'
+                      }
+                      options={locations.map((location) => ({
+                        value: String(location.idLocation),
+                        label: location.name,
+                      }))}
+                      disabled={
+                        isLoadingLocations ||
+                        locations.length === 0 ||
+                        Boolean(locationsError)
+                      }
+                      onChange={(value) => onFormChange('idLocation', value)}
+                    />
+
+                    {locationsError && (
+                      <p className="form-message" role="alert">
+                        {locationsError}
+                      </p>
+                    )}
+                  </label>
+                </>
+              )}
+
+              <label>
+                Correo electrónico
+                <input
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  placeholder="tu@correo.com"
+                  value={form.email}
+                  onChange={(event) =>
+                    onFormChange('email', event.target.value)
+                  }
+                  required
+                />
+              </label>
+
+              <label>
+                Contraseña
+                <input
+                  type="password"
+                  name="password"
+                  autoComplete={isRegister ? 'new-password' : 'current-password'}
+                  value={form.password}
+                  onChange={(event) =>
+                    onFormChange('password', event.target.value)
+                  }
+                  minLength={isRegister ? 8 : undefined}
+                  maxLength={isRegister ? 72 : undefined}
+                  pattern={
+                    isRegister
+                      ? '(?=.*[A-Za-z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,72}'
+                      : undefined
+                  }
+                  title={
+                    isRegister
+                      ? 'Debe tener entre 8 y 72 caracteres, incluyendo una letra, un número y un símbolo.'
+                      : undefined
+                  }
+                  required
+                />
+              </label>
+
+              {message && (
+                <p className="form-message" role="status">
+                  {message}
+                </p>
+              )}
+
+              <button
+                className="button button-primary auth-submit"
+                type="submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? 'Procesando...'
+                  : isRegister
+                    ? 'Crear cuenta'
+                    : 'Iniciar sesión'}
+
+                {!isSubmitting && <ArrowRight size={18} />}
+              </button>
+            </form>
+
+            <p className="auth-switch">
+              {isRegister
+                ? '¿Ya tienes una cuenta?'
+                : '¿Todavía no tienes una cuenta?'}{' '}
+              <button type="button" onClick={onSwitchMode}>
+                {isRegister ? 'Inicia sesión' : 'Regístrate'}
+              </button>
+            </p>
+          </>
+        )}
+      </section>
+    </div>
+  )
+}
+
+export default AuthModal
+==> ./presentation/components/client/ClientLayout.tsx <==
+
+==> ./presentation/components/client/ClientOverview.tsx <==
+
+==> ./presentation/components/client/ClientProfileSection.tsx <==
+
+==> ./presentation/components/client/ClientRoutines.tsx <==
+
+==> ./presentation/components/client/ClientSessions.tsx <==
+
+==> ./presentation/components/common/AgeInput.tsx <==
+
+type AgeInputProps = {
+  value: string
+  onChange: (value: string) => void
+}
+
+function AgeInput({ value, onChange }: AgeInputProps) {
+  const age = Number(value)
+
+  // Incrementa la edad sin superar el máximo permitido.
+  function increaseAge() {
+    onChange(String(Math.min(120, (age || 0) + 1)))
+  }
+
+  // Disminuye la edad sin bajar de 1.
+  function decreaseAge() {
+    onChange(String(Math.max(1, (age || 2) - 1)))
+  }
+
+  return (
+    <div className="age-control">
+      <input
+        className="age-input"
+        type="number"
+        name="age"
+        min={1}
+        max={120}
+        step={1}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        required
+      />
+
+      <div className="age-buttons">
+        <button
+          type="button"
+          aria-label="Aumentar edad"
+          title="Aumentar edad"
+          disabled={age >= 120}
+          onClick={increaseAge}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="m6 14 6-6 6 6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          aria-label="Disminuir edad"
+          title="Disminuir edad"
+          disabled={value !== '' && age <= 1}
+          onClick={decreaseAge}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="m6 10 6 6 6-6"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default AgeInput
+==> ./presentation/components/common/CustomSelect.tsx <==
+
+import { useEffect, useRef, useState } from 'react'
+import type { KeyboardEvent } from 'react'
+
+// Define la estructura de cada opción del selector.
+export type SelectOption = {
+  value: string
+  label: string
+}
+
+// Propiedades que recibe el componente.
+type CustomSelectProps = {
+  value: string
+  options: SelectOption[]
+  placeholder: string
+  onChange: (value: string) => void
+  disabled?: boolean
+}
+
+function CustomSelect({
+  value,
+  options,
+  placeholder,
+  onChange,
+  disabled = false,
+}: CustomSelectProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Busca la opción que coincide con el valor seleccionado.
+  const selectedOption = options.find(
+    (option) => option.value === value,
+  )
+
+  // Cierra el menú cuando se hace clic fuera del selector.
+  useEffect(() => {
+    function handleOutsideClick(event: PointerEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handleOutsideClick)
+
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsideClick)
+    }
+  }, [])
+
+  // Selecciona una opción y cierra el menú.
+  function chooseOption(option: SelectOption) {
+    onChange(option.value)
+    setIsOpen(false)
+  }
+
+  // Gestiona la navegación mediante el teclado.
+  function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
+    if (disabled || options.length === 0) return
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+
+      if (!isOpen) {
+        setIsOpen(true)
+
+        const selectedIndex = options.findIndex(
+          (option) => option.value === value,
+        )
+
+        setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0)
+        return
+      }
+
+      setActiveIndex((current) => {
+        if (event.key === 'ArrowDown') {
+          return (current + 1) % options.length
+        }
+
+        return (current - 1 + options.length) % options.length
+      })
+    }
+
+    if (event.key === 'Enter' && isOpen) {
+      event.preventDefault()
+      chooseOption(options[activeIndex])
+    }
+
+    if (event.key === 'Escape') {
+      setIsOpen(false)
+    }
+
+    if (event.key === 'Home' && isOpen) {
+      event.preventDefault()
+      setActiveIndex(0)
+    }
+
+    if (event.key === 'End' && isOpen) {
+      event.preventDefault()
+      setActiveIndex(options.length - 1)
+    }
+  }
+
+  return (
+    <div className="custom-select" ref={containerRef}>
+      <button
+        type="button"
+        className={`custom-select-trigger ${isOpen ? 'is-open' : ''}`}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        disabled={disabled}
+        onClick={() => {
+          if (disabled || options.length === 0) return
+
+          if (!isOpen) {
+            const selectedIndex = options.findIndex(
+              (option) => option.value === value,
+            )
+
+            setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0)
+          }
+
+          setIsOpen((open) => !open)
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        <span className={!selectedOption ? 'custom-select-placeholder' : ''}>
+          {selectedOption?.label ?? placeholder}
+        </span>
+
+        <svg
+          className="custom-select-chevron"
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="custom-select-menu" role="listbox">
+          {options.map((option, index) => (
+            <div
+              key={option.value}
+              id={`custom-option-${option.value}`}
+              role="option"
+              aria-selected={option.value === value}
+              className={[
+                'custom-select-option',
+                option.value === value ? 'is-selected' : '',
+                index === activeIndex ? 'is-active' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              onMouseEnter={() => setActiveIndex(index)}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                chooseOption(option)
+              }}
+            >
+              <span>{option.label}</span>
+
+              {option.value === value && (
+                <span className="custom-select-check" aria-hidden="true">
+                  ✓
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default CustomSelect
+
+==> ./presentation/components/routing/ProtectedRoute.tsx <==
+import { Navigate, Outlet } from 'react-router'
+
+import type { UserRole } from '../../../application/dtos/auth'
+import { useAuthSession } from '../../contexts/useAuthSession'
+
+import { APP_PATHS } from '../../routes/paths'
+import { getRolePath } from '../../routes/rolePaths'
+
+type ProtectedRouteProps = {
+  allowedRoles: UserRole[]
+}
+
+/**
+ * Protege las rutas según la sesión y los roles autorizados.
+ */
+function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
+  const { session } = useAuthSession()
+
+  // Si no existe sesión, enviamos al inicio.
+  if (!session) {
+    return <Navigate to={APP_PATHS.HOME} replace />
+  }
+
+  // Si el rol no está autorizado, redirigimos a su panel.
+  if (!allowedRoles.includes(session.user.role)) {
+    return (
+      <Navigate
+        to={getRolePath(session.user.role)}
+        replace
+      />
+    )
+  }
+
+  return <Outlet />
+}
+
+export default ProtectedRoute
+==> ./presentation/contexts/AuthSessionContext.tsx <==
+import { useState, type ReactNode } from 'react'
+
+import type { AuthSession } from '../../application/dtos/auth'
+import type { SessionRepository } from '../../application/ports/SessionRepository'
+
+import {
+  AuthSessionContext,
+} from './useAuthSession'
+
+type AuthSessionProviderProps = {
+  children: ReactNode
+  sessionRepository: SessionRepository
+}
+
+/**
+ * Proporciona el estado de autenticación a toda la aplicación.
+ */
+export function AuthSessionProvider({
+  children,
+  sessionRepository,
+}: AuthSessionProviderProps) {
+  // Recuperamos la sesión al iniciar la aplicación.
+  const [session, setCurrentSession] = useState<AuthSession | null>(
+    () => sessionRepository.getSession(),
+  )
+
+  /**
+   * Actualiza el estado y persiste la sesión.
+   */
+  function setSession(newSession: AuthSession) {
+    sessionRepository.saveSession(newSession)
+    setCurrentSession(newSession)
+  }
+
+  /**
+   * Cierra la sesión y elimina los datos almacenados.
+   */
+  function logout() {
+    sessionRepository.clearSession()
+    setCurrentSession(null)
+  }
+
+  return (
+    <AuthSessionContext.Provider value={{ session, setSession, logout }}>
+      {children}
+    </AuthSessionContext.Provider>
+  )
+}
+==> ./presentation/contexts/useAuthSession.ts <==
+import { createContext, useContext } from 'react'
+
+import type { AuthSession } from '../../application/dtos/auth'
+
+/**
+ * Define las operaciones disponibles para gestionar la sesión.
+ */
+export type AuthSessionContextType = {
+  session: AuthSession | null
+  setSession: (session: AuthSession) => void
+  logout: () => void
+}
+
+/**
+ * Contexto compartido de autenticación.
+ */
+export const AuthSessionContext =
+  createContext<AuthSessionContextType | null>(null)
+
+/**
+ * Permite acceder al contexto de autenticación.
+ */
+export function useAuthSession(): AuthSessionContextType {
+  const context = useContext(AuthSessionContext)
+
+  if (!context) {
+    throw new Error(
+      'useAuthSession debe utilizarse dentro de AuthSessionProvider.',
+    )
+  }
+
+  return context
+}
+==> ./presentation/hooks/useAuth.ts <==
+import { useEffect, useState, type FormEvent } from 'react'
+import axios from 'axios'
+
+import type { Login } from '../../application/use-cases/auth/Login'
+import type { RegisterClient } from '../../application/use-cases/auth/RegisterClient'
+import type { GetLocations } from '../../application/use-cases/location/GetLocations'
+
+import type { AuthForm, AuthMode } from '../types/auth'
+import type { Location } from '../../domain/entities/Location'
+
+import type { AuthSession } from '../../application/dtos/auth'
+
+const INITIAL_FORM: AuthForm = {
+  name: '',
+  email: '',
+  phone: '',
+  password: '',
+  age: '',
+  gender: '',
+  idLocation: '',
+}
+
+type UseAuthDependencies = {
+  loginUseCase: Login
+  registerClientUseCase: RegisterClient
+  getLocationsUseCase: GetLocations
+  onLoginSuccess: (session: AuthSession) => void
+}
+
+export function useAuth({
+  loginUseCase,
+  registerClientUseCase,
+  getLocationsUseCase,
+  onLoginSuccess,
+}: UseAuthDependencies) {
+  const [authMode, setAuthMode] = useState<AuthMode | null>(null)
+  const [form, setForm] = useState<AuthForm>({ ...INITIAL_FORM })
+  const [message, setMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [registrationCompleted, setRegistrationCompleted] = useState(false)
+
+  const [locations, setLocations] = useState<Location[]>([])
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false)
+  const [locationsError, setLocationsError] = useState('')
+
+  useEffect(() => {
+    async function loadLocations() {
+      try {
+        setIsLoadingLocations(true)
+        const data = await getLocationsUseCase.execute()
+        setLocations(data)
+      } catch (error) {
+        console.error('Error al cargar las sedes:', error)
+        setLocationsError(
+          'No se pudieron cargar las sedes. Recarga la página.',
+        )
+      } finally {
+        setIsLoadingLocations(false)
+      }
+    }
+
+    loadLocations()
+  }, [getLocationsUseCase])
+
+  function handleFormChange(field: keyof AuthForm, value: string) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }))
+  }
+
+  function openAuth(mode: AuthMode) {
+    setAuthMode(mode)
+    setForm({ ...INITIAL_FORM })
+    setMessage('')
+    setRegistrationCompleted(false)
+  }
+
+  function closeAuth() {
+    setAuthMode(null)
+    setMessage('')
+    setRegistrationCompleted(false)
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setMessage('')
+
+    if (authMode === 'register' && !form.gender) {
+      setMessage('Selecciona una opción de género.')
+      return
+    }
+
+    if (authMode === 'register' && !form.idLocation) {
+      setMessage('Selecciona una sede del gimnasio.')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      if (authMode === 'login') {
+        const session = await loginUseCase.execute({
+          email: form.email.trim(),
+          password: form.password,
+        })
+
+        onLoginSuccess(session)
+        closeAuth()
+      } else if (authMode === 'register') {
+        await registerClientUseCase.execute({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          password: form.password,
+          role: 'CLIENT',
+          age: Number(form.age),
+          gender: form.gender as 'FEMENINO' | 'MASCULINO' | 'OTRO',
+          idLocation: Number(form.idLocation),
+        })
+
+        setRegistrationCompleted(true)
+      }
+    } catch (error: unknown) {
+      console.error('Error durante la autenticación:', error)
+
+      if (axios.isAxiosError(error)) {
+        console.error('Respuesta del servidor:', error.response?.data)
+        console.error('Código HTTP:', error.response?.status)
+
+        setMessage(
+          error.response?.data?.error?.message ??
+            'No se pudo completar la operación.',
+        )
+      } else if (error instanceof Error) {
+        console.error('Mensaje:', error.message)
+        setMessage(error.message)
+      } else {
+        setMessage('Ocurrió un error inesperado.')
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Inicia sesión después de que el usuario elija ir a su panel.
+  async function handleGoToPanel() {
+    setIsSubmitting(true)
+    setMessage('')
+
+    try {
+      const session = await loginUseCase.execute({
+        email: form.email.trim(),
+        password: form.password,
+      })
+
+      onLoginSuccess(session)
+      closeAuth()
+    } catch (error) {
+      console.error('Error al iniciar sesión automáticamente:', error)
+
+      setMessage(
+        'Tu cuenta fue creada, pero no pudimos iniciar sesión automáticamente. Inténtalo desde el inicio de sesión.',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return {
+    authMode,
+    form,
+    message,
+    isSubmitting,
+    registrationCompleted,
+    locations,
+    isLoadingLocations,
+    locationsError,
+    handleFormChange,
+    openAuth,
+    closeAuth,
+    handleSubmit,
+    handleGoToPanel,
+  }
+}
+==> ./presentation/hooks/useClientProfile.ts <==
+
+==> ./presentation/pages/AdminPage.tsx <==
+import { useAuthSession } from '../contexts/useAuthSession'
+
+function AdminPage() {
+  const { session, logout } = useAuthSession()
+
+  return (
+    <main>
+      <h1>Panel de administración</h1>
+      <p>Bienvenido, {session?.user.name}</p>
+
+      <button onClick={logout}>
+        Cerrar sesión
+      </button>
+    </main>
+  )
+}
+
+export default AdminPage
+==> ./presentation/pages/ClientPage.tsx <==
+import { useAuthSession } from '../contexts/useAuthSession'
+
+function ClientPage() {
+  const { session, logout } = useAuthSession()
+
+  return (
+    <main>
+      <h1>Panel del cliente</h1>
+      <p>Bienvenido, {session?.user.name}</p>
+
+      <button onClick={logout}>
+        Cerrar sesión
+      </button>
+    </main>
+  )
+}
+
+export default ClientPage
+==> ./presentation/pages/LandingPage.tsx <==
+import { useState } from 'react'
+import {
+  Activity,
+  ArrowRight,
+  CheckCircle2,
+  ClipboardList,
+  Dumbbell,
+  Menu,
+  ShieldCheck,
+  Users,
+  X,
+} from 'lucide-react'
+import type { AuthMode } from '../types/auth'
+
+type LandingPageProps = {
+  onOpenAuth: (mode: AuthMode) => void
+}
+
+const features = [
+  {
+    icon: ClipboardList,
+    title: 'Rutinas organizadas',
+    description:
+      'Consulta y organiza planes de entrenamiento desde un mismo lugar.',
+  },
+  {
+    icon: Dumbbell,
+    title: 'Entrenamiento personalizado',
+    description:
+      'Trabaja con ejercicios clasificados por tipo, intensidad y grupo muscular.',
+  },
+  {
+    icon: Activity,
+    title: 'Seguimiento del progreso',
+    description:
+      'Facilita el seguimiento de las sesiones y la evolución del entrenamiento.',
+  },
+]
+
+function LandingPage({ onOpenAuth }: LandingPageProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  return (
+    <div className="app">
+      <header className="site-header">
+        <a
+          className="brand"
+          href="#inicio"
+          aria-label="MatCom Bench Press, inicio"
+        >
+          <span className="brand-icon">
+            <Dumbbell size={23} strokeWidth={2.5} />
+          </span>
+          <span>Matcom Bench Press</span>
+        </a>
+
+        <button
+          className="menu-toggle"
+          type="button"
+          aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
+          {menuOpen ? <X size={23} /> : <Menu size={23} />}
+        </button>
+
+        <nav className={`navigation ${menuOpen ? 'navigation-open' : ''}`}>
+          <a href="#funcionalidades" onClick={() => setMenuOpen(false)}>
+            Funcionalidades
+          </a>
+
+          <a href="#como-funciona" onClick={() => setMenuOpen(false)}>
+            Cómo funciona
+          </a>
+
+          <button
+            className="button button-outline"
+            type="button"
+            onClick={() => onOpenAuth('login')}
+          >
+            Iniciar sesión
+          </button>
+
+          <button
+            className="button button-primary nav-register"
+            type="button"
+            onClick={() => onOpenAuth('register')}
+          >
+            Crear cuenta
+          </button>
+        </nav>
+      </header>
+
+      <main>
+        <section className="hero" id="inicio">
+          <div className="hero-copy">
+            <span className="eyebrow">
+              <span className="eyebrow-dot" />
+              TU ENTRENAMIENTO, MEJOR ORGANIZADO
+            </span>
+
+            <h1>
+              Entrena con un plan.
+              <span> Avanza con propósito.</span>
+            </h1>
+
+            <p className="hero-description">
+              Organiza tus rutinas, trabaja con ejercicios estructurados y
+              lleva un mejor seguimiento de tu entrenamiento desde un solo
+              lugar.
+            </p>
+
+            <div className="hero-actions">
+              <button
+                className="button button-primary button-large"
+                type="button"
+                onClick={() => onOpenAuth('register')}
+              >
+                Comenzar ahora <ArrowRight size={18} />
+              </button>
+
+              <a className="text-link" href="#funcionalidades">
+                Descubrir funcionalidades
+              </a>
+            </div>
+
+            <div className="hero-trust">
+              <span className="trust-icon">
+                <ShieldCheck size={19} />
+              </span>
+              <span>Una experiencia diseñada para tu entrenamiento</span>
+            </div>
+          </div>
+
+          <div
+            className="hero-visual"
+            aria-label="Vista ilustrativa del panel"
+          >
+            <div className="visual-orbit orbit-one" />
+            <div className="visual-orbit orbit-two" />
+
+            <div className="dashboard-card">
+              <div className="dashboard-top">
+                <div>
+                  <span className="dashboard-kicker">
+                    TU ESPACIO FITNESS
+                  </span>
+                  <h2>Panel de entrenamiento</h2>
+                </div>
+
+                <span className="dashboard-mark">
+                  <Activity size={21} />
+                </span>
+              </div>
+
+              <div className="welcome-panel">
+                <div>
+                  <span className="welcome-label">EMPIEZA HOY</span>
+                  <h3>Tu próximo objetivo te espera.</h3>
+                  <p>Un paso a la vez. Una sesión a la vez.</p>
+                </div>
+
+                <div className="welcome-figure">
+                  <Dumbbell size={43} strokeWidth={1.6} />
+                </div>
+              </div>
+
+              <div className="dashboard-section-heading">
+                <span>Tu entrenamiento</span>
+                <span className="live-dot" />
+              </div>
+
+              <div className="mini-feature">
+                <span className="mini-icon">
+                  <ClipboardList size={20} />
+                </span>
+
+                <div className="mini-copy">
+                  <strong>Rutinas estructuradas</strong>
+                  <span>Ejercicios y objetivos organizados</span>
+                </div>
+
+                <CheckCircle2 className="mini-check" size={20} />
+              </div>
+
+              <div className="mini-feature">
+                <span className="mini-icon mini-icon-light">
+                  <Activity size={20} />
+                </span>
+
+                <div className="mini-copy">
+                  <strong>Seguimiento de sesiones</strong>
+                  <span>Registra tu actividad y evolución</span>
+                </div>
+
+                <ArrowRight className="mini-arrow" size={19} />
+              </div>
+
+              <div className="dashboard-footer">
+                <span>
+                  <Users size={15} /> Para clientes y entrenadores
+                </span>
+                <span className="footer-status">MATCOM BENCH PRESS</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="features-section" id="funcionalidades">
+          <div className="section-heading">
+            <span className="section-label">FUNCIONALIDADES</span>
+            <h2>Todo lo que necesitas para organizarte mejor</h2>
+            <p>
+              Una base sencilla para gestionar el entrenamiento de forma
+              estructurada y facilitar el seguimiento del progreso.
+            </p>
+          </div>
+
+          <div className="features-grid">
+            {features.map((feature) => {
+              const Icon = feature.icon
+
+              return (
+                <article className="feature-card" key={feature.title}>
+                  <span className="feature-icon">
+                    <Icon size={24} />
+                  </span>
+
+                  <h3>{feature.title}</h3>
+                  <p>{feature.description}</p>
+
+                  <a href="#como-funciona" className="feature-link">
+                    Conocer más <ArrowRight size={16} />
+                  </a>
+                </article>
+              )
+            })}
+          </div>
+        </section>
+
+        <section className="cta-section" id="como-funciona">
+          <div>
+            <span className="section-label">EMPIEZA POR LO ESENCIAL</span>
+            <h2>Organiza tu entrenamiento desde hoy.</h2>
+            <p>
+              Crea tu cuenta y prepárate para gestionar tus rutinas en un
+              espacio pensado para el gimnasio.
+            </p>
+          </div>
+
+          <button
+            className="button button-light button-large"
+            type="button"
+            onClick={() => onOpenAuth('register')}
+          >
+            Crear mi cuenta <ArrowRight size={18} />
+          </button>
+        </section>
+      </main>
+
+      <footer className="site-footer">
+        <a className="brand footer-brand" href="#inicio">
+          <span className="brand-icon">
+            <Dumbbell size={20} />
+          </span>
+          <span>MatCom Bench Press</span>
+        </a>
+
+        <p>Organiza tus rutinas. Construye tu progreso.</p>
+        <span className="copyright">Proyecto universitario · 2026</span>
+      </footer>
+    </div>
+  )
+}
+
+export default LandingPage
+==> ./presentation/pages/TrainerPage.tsx <==
+import { useAuthSession } from '../contexts/useAuthSession'
+
+function TrainerPage() {
+  const { session, logout } = useAuthSession()
+
+  const isHeadTrainer = session?.user.role === 'HEAD_TRAINER'
+
+  return (
+    <main>
+      <h1>Panel de entrenamiento</h1>
+      <p>Bienvenido, {session?.user.name}</p>
+
+      {isHeadTrainer && (
+        <section>
+          <h2>Funciones adicionales del jefe de sala</h2>
+          <p>
+            Aquí aparecerán las funcionalidades exclusivas
+            del jefe de sala.
+          </p>
+        </section>
+      )}
+
+      <button onClick={logout}>
+        Cerrar sesión
+      </button>
+    </main>
+  )
+}
+
+export default TrainerPage
+==> ./presentation/routes/AppRouter.tsx <==
+import {
+  Navigate,
+  Route,
+  Routes,
+} from 'react-router'
+
+import AdminPage from '../pages/AdminPage'
+import TrainerPage from '../pages/TrainerPage'
+import ClientPage from '../pages/ClientPage'
+
+import ProtectedRoute from '../components/routing/ProtectedRoute'
+import { APP_PATHS } from './paths'
+
+import type { ReactNode } from 'react'
+
+type AppRouterProps = {
+  homePage: ReactNode
+}
+
+/**
+ * Define las rutas públicas y protegidas de la aplicación.
+ */
+function AppRouter({ homePage }: AppRouterProps) {
+  return (
+      <Routes>
+        {/* Página pública. */}
+        <Route path={APP_PATHS.HOME} element={homePage} />
+
+        {/* Rutas exclusivas del administrador. */}
+        <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+          <Route path={APP_PATHS.ADMIN} element={<AdminPage />} />
+        </Route>
+
+        {/* Entrenadores y jefes de sala comparten página. */}
+        <Route
+          element={
+            <ProtectedRoute
+              allowedRoles={['TRAINER', 'HEAD_TRAINER']}
+            />
+          }
+        >
+          <Route path={APP_PATHS.TRAINER} element={<TrainerPage />} />
+        </Route>
+
+        {/* Ruta exclusiva del cliente. */}
+        <Route element={<ProtectedRoute allowedRoles={['CLIENT']} />}>
+          <Route path={APP_PATHS.CLIENT} element={<ClientPage />} />
+        </Route>
+
+        {/* Cualquier ruta desconocida vuelve al inicio. */}
+        <Route
+          path="*"
+          element={<Navigate to={APP_PATHS.HOME} replace />}
+        />
+      </Routes>
+  )
+}
+
+export default AppRouter
+==> ./presentation/routes/paths.ts <==
+/**
+ * Centraliza las rutas principales de la aplicación.
+ */
+export const APP_PATHS = {
+  HOME: '/',
+  ADMIN: '/admin',
+  TRAINER: '/trainer',
+  CLIENT: '/client',
+} as const
+==> ./presentation/routes/rolePaths.ts <==
+import type { UserRole } from '../../application/dtos/auth'
+import { APP_PATHS } from './paths'
+
+/**
+ * Obtiene la ruta correspondiente a cada rol.
+ */
+export function getRolePath(role: UserRole): string {
+  switch (role) {
+    case 'ADMIN':
+      return APP_PATHS.ADMIN
+
+    case 'TRAINER':
+    case 'HEAD_TRAINER':
+      return APP_PATHS.TRAINER
+
+    case 'CLIENT':
+      return APP_PATHS.CLIENT
+  }
+}
+==> ./presentation/styles/auth.css <==
+/* Modal y controles de autenticación */
+
+
+.modal-backdrop {
+position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 24px;
+  background: rgb(0 45 44 / 62%);
+  backdrop-filter: blur(5px);
+  color: var(--primary);
+}
+
+
+.auth-modal {
+position: relative;
+  width: min(100%, 440px);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 35px;
+  background: white;
+  border: 1px solid #e1ecea;
+  border-radius: 23px;
+  box-shadow: 0 25px 90px rgb(0 0 0 / 20%);
+}
+
+
+.modal-close {
+position: absolute;
+  top: 17px;
+  right: 17px;
+  display: grid;
+  width: 37px;
+  height: 37px;
+  place-items: center;
+  color: var(--muted);
+  background: #f0f5f4;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+
+.modal-close:hover {
+color: var(--primary);
+  background: #e4efed;
+}
+
+
+.auth-logo {
+display: grid;
+  width: 51px;
+  height: 51px;
+  margin-bottom: 24px;
+  place-items: center;
+  color: white;
+  background: var(--primary);
+  border-radius: 15px;
+}
+
+
+.auth-modal h2 {
+margin: 10px 0;
+  font-size: 2rem;
+  letter-spacing: -1px;
+}
+
+
+.auth-subtitle {
+margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+
+.auth-form {
+display: grid;
+  gap: 18px;
+  margin-top: 25px;
+}
+
+
+.auth-form label {
+display: grid;
+  gap: 8px;
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+
+.auth-form input,
+.auth-form select {
+width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  color: var(--primary);
+  background-color: #fbfdfd;
+  border: 1px solid #cedddb;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.auth-form select {
+appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 42px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23004c4c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+}
+
+
+.auth-form input::placeholder {
+color: #91a5a2;
+}
+
+
+.auth-form input:focus,
+.auth-form select:focus {
+border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(0 166 153 / 13%);
+}
+
+
+.auth-form select option {
+color: var(--primary);
+  background-color: #ffffff;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+
+.auth-form select option:checked {
+color: #ffffff;
+  background-color: var(--primary);
+}
+
+
+.auth-submit {
+width: 100%;
+  min-height: 49px;
+  margin-top: 2px;
+}
+
+
+.form-message {
+margin: 0;
+  padding: 12px;
+  color: var(--primary);
+  background: #e8f5f3;
+  border: 1px solid #cbe7e2;
+  border-radius: 9px;
+  font-size: 0.83rem;
+  line-height: 1.6;
+}
+
+
+.auth-switch {
+margin: 22px 0 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.84rem;
+}
+
+
+.auth-switch button {
+padding: 0;
+  color: #008a7f;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+
+.auth-switch button:hover {
+text-decoration: underline;
+}
+
+
+.auth-note {
+margin: 19px 0 0;
+  color: #879b98;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+
+@media (max-width: 420px) {
+.auth-modal {
+padding: 28px 22px;
+}
+.modal-backdrop {
+padding: 12px;
+}
+}
+
+
+/* Selector personalizado de género */
+.custom-select {
+position: relative;
+  width: 100%;
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+
+.custom-select-trigger {
+display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  color: var(--primary);
+  background: #fbfdfd;
+  border: 1px solid #cedddb;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+
+.custom-select-trigger:hover {
+border-color: #9fc9c5;
+}
+
+
+.custom-select-trigger:focus-visible,
+.custom-select-trigger.is-open {
+outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(0 166 153 / 13%);
+}
+
+
+.custom-select-placeholder {
+color: #91a5a2;
+}
+
+
+.custom-select-chevron {
+flex-shrink: 0;
+  color: var(--primary);
+  transition: transform 0.2s ease;
+}
+
+
+.custom-select-trigger.is-open .custom-select-chevron {
+transform: rotate(180deg);
+}
+
+
+.custom-select-menu {
+position: absolute;
+  z-index: 20;
+  top: calc(100% + 7px);
+  right: 0;
+  left: 0;
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 5px;
+  background: #ffffff;
+  border: 1px solid #dce8e7;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgb(0 76 76 / 14%);
+  animation: select-appear 0.15s ease-out;
+}
+
+
+.custom-select-option {
+display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 10px 12px;
+  color: var(--primary);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+
+.custom-select-option:hover,
+.custom-select-option.is-active {
+background: #e8f5f3;
+}
+
+
+.custom-select-option.is-selected {
+color: #007f75;
+  background: #e8f5f3;
+  font-weight: 700;
+}
+
+
+.custom-select-check {
+color: var(--accent);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+
+@keyframes select-appear {
+from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Campo de edad con botones personalizados */
+.age-control {
+display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-height: 48px;
+  overflow: hidden;
+  background: #fbfdfd;
+  border: 1px solid #cedddb;
+  border-radius: 10px;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.age-control:focus-within {
+border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(0 166 153 / 13%);
+}
+
+
+.auth-form .age-input {
+flex: 1;
+  width: 0;
+  min-width: 0;
+  min-height: 46px;
+  padding: 12px 14px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+
+.auth-form .age-input:focus {
+border: 0;
+  box-shadow: none;
+}
+
+
+/* Ocultar las flechas nativas del input numérico */
+.auth-form .age-input::-webkit-inner-spin-button,
+.auth-form .age-input::-webkit-outer-spin-button {
+margin: 0;
+  -webkit-appearance: none;
+}
+
+
+.age-buttons {
+display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px;
+  background: #e8f5f3;
+  border-left: 1px solid #dce8e7;
+}
+
+
+.age-buttons button {
+display: grid;
+  flex: 1;
+  min-width: 34px;
+  min-height: 16px;
+  place-items: center;
+  padding: 0 8px;
+  color: var(--primary);
+  background: #ffffff;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+
+.age-buttons button:hover:not(:disabled) {
+color: #ffffff;
+  background: var(--accent);
+}
+
+
+.age-buttons button:focus-visible {
+outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+
+.age-buttons button:disabled {
+color: #a9bfbc;
+  background: #f4f8f7;
+  cursor: not-allowed;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+.custom-select-chevron,
+  .custom-select-trigger,
+  .custom-select-option,
+  .age-buttons button {
+transition: none;
+}
+.custom-select-menu {
+animation: none;
+}
+}
+
+/* Confirmación de registro */
+
+.auth-success {
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  gap: 1rem;
+  padding: 12px 0 4px;
+  text-align: center;
+}
+
+.auth-success h2 {
+  margin: 5px 0;
+}
+
+.auth-success p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.auth-success-actions {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 0.75rem;
+  margin-top: 10px;
+}
+
+.auth-success-actions button {
+  width: 100%;
+  justify-content: center;
+}
+
+.button-secondary {
+  color: var(--primary);
+  background: transparent;
+  border: 1px solid #c6d9d7;
+}
+
+.button-secondary:hover:not(:disabled) {
+  background: #e8f5f3;
+}
+==> ./presentation/styles/global.css <==
+/* Variables, estilos base y elementos compartidos */
+
+
+/* Variables globales del sistema de diseño */
+:root {
+--primary: #004c4c;
+  --accent: #00a699;
+  --aqua: #b2d8d8;
+  --surface: #ffffff;
+  --page: #f5f5f5;
+  --muted: #5d7474;
+  --border: #dce8e7;
+}
+
+
+/* Contenedor principal de la aplicación */
+.app {
+min-height: 100vh;
+  overflow: hidden;
+  color: var(--primary);
+}
+
+
+.button {
+display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 12px 19px;
+  font: inherit;
+  font-size: 0.93rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+
+.button:hover:not(:disabled) {
+transform: translateY(-2px);
+}
+
+
+.button:focus-visible,
+.navigation a:focus-visible,
+.text-link:focus-visible,
+.feature-link:focus-visible {
+outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+
+
+.button:disabled {
+cursor: not-allowed;
+  opacity: 0.7;
+}
+
+
+.button-primary {
+color: white;
+  background: var(--primary);
+  box-shadow: 0 6px 16px rgb(0 76 76 / 12%);
+}
+
+
+.button-primary:hover:not(:disabled) {
+background: #00615e;
+  box-shadow: 0 9px 22px rgb(0 76 76 / 17%);
+}
+
+
+.button-outline {
+color: var(--primary);
+  background: transparent;
+  border-color: #c6d9d7;
+}
+
+
+.button-outline:hover {
+background: white;
+}
+
+
+.button-large {
+min-height: 52px;
+  padding: 14px 22px;
+}
+
+
+.button-light {
+color: var(--primary);
+  background: white;
+  flex-shrink: 0;
+}
+
+
+.button-light:hover {
+background: var(--page);
+}
+
+
+.footer-status {
+font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+
+@media (max-width: 420px) {
+.hero-actions .button {
+width: 100%;
+}
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+*,
+  *::before,
+  *::after {
+scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+}
+}
+
+==> ./presentation/styles/layout.css <==
+/* Encabezado, navegación y pie de página */
+
+
+.site-header {
+width: min(1180px, calc(100% - 48px));
+  min-height: 88px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+
+.brand {
+display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.7px;
+  flex-shrink: 0;
+}
+
+
+.brand-icon {
+display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  color: white;
+  background: var(--primary);
+  border-radius: 13px;
+}
+
+
+.navigation {
+display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+
+.navigation > a:not(.brand) {
+color: #425e5d;
+  text-decoration: none;
+  font-size: 0.91rem;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+
+.navigation > a:hover,
+.text-link:hover,
+.feature-link:hover {
+color: var(--accent);
+}
+
+
+.menu-toggle {
+display: none;
+  padding: 8px;
+  color: var(--primary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+
+.site-footer {
+display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 26px max(24px, calc((100% - 1180px) / 2));
+  background: white;
+  border-top: 1px solid var(--border);
+}
+
+
+.footer-brand {
+font-size: 1.15rem;
+}
+
+
+.footer-brand .brand-icon {
+width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+
+.site-footer p,
+.copyright {
+margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+
+@media (max-width: 1000px) {
+.navigation {
+gap: 17px;
+}
+}
+
+
+@media (max-width: 760px) {
+.site-header {
+min-height: 75px;
+}
+.menu-toggle {
+display: grid;
+    place-items: center;
+}
+.navigation {
+position: absolute;
+    top: 68px;
+    right: 0;
+    left: 0;
+    z-index: 5;
+    display: none;
+    align-items: stretch;
+    gap: 8px;
+    padding: 17px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    box-shadow: 0 16px 35px rgb(0 76 76 / 10%);
+}
+.navigation-open {
+display: flex;
+    flex-direction: column;
+}
+.navigation > a:not(.brand) {
+padding: 12px 8px;
+}
+.site-footer {
+align-items: flex-start;
+    flex-direction: column;
+    gap: 13px;
+    padding: 25px 24px;
+}
+}
+
+
+@media (max-width: 420px) {
+.site-header,
+  .hero,
+  .cta-section {
+width: calc(100% - 32px);
+    position: relative;
+}
+}
+
+==> ./presentation/styles/sections.css <==
+/* Secciones principales de la landing page */
+
+
+.hero {
+position: relative;
+  display: grid;
+  grid-template-columns: 1.02fr 0.98fr;
+  align-items: center;
+  gap: 55px;
+  width: min(1180px, calc(100% - 48px));
+  min-height: 590px;
+  margin: 0 auto;
+  padding: 42px 0 76px;
+}
+
+
+.hero-copy {
+position: relative;
+  z-index: 1;
+}
+
+
+.eyebrow,
+.section-label {
+display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #087f76;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1.45px;
+}
+
+
+.eyebrow {
+padding: 9px 13px;
+  background: #e5f3f1;
+  border: 1px solid #d4eae7;
+  border-radius: 999px;
+}
+
+
+.eyebrow-dot,
+.live-dot {
+width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+
+
+.hero h1 {
+max-width: 650px;
+  margin: 25px 0 22px;
+  font-size: clamp(2.8rem, 5vw, 4.35rem);
+  line-height: 1.07;
+  letter-spacing: -2.8px;
+  font-weight: 800;
+}
+
+
+.hero h1 span {
+color: var(--accent);
+}
+
+
+.hero-description {
+max-width: 520px;
+  color: var(--muted);
+  font-size: 1.08rem;
+  line-height: 1.85;
+}
+
+
+.hero-actions {
+display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 22px;
+  margin-top: 31px;
+}
+
+
+.text-link {
+color: var(--primary);
+  font-size: 0.91rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+
+.hero-trust {
+display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 32px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+
+.trust-icon {
+display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: var(--accent);
+  background: #e3f3f0;
+  border-radius: 50%;
+}
+
+
+.hero-visual {
+position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 450px;
+  place-items: center;
+  isolation: isolate;
+}
+
+
+.visual-orbit {
+position: absolute;
+  z-index: -1;
+  border: 1px solid rgb(0 166 153 / 15%);
+  border-radius: 50%;
+}
+
+
+.orbit-one {
+width: 440px;
+  height: 440px;
+}
+
+
+.orbit-two {
+width: 360px;
+  height: 360px;
+  background: rgb(178 216 216 / 20%);
+}
+
+
+.dashboard-card {
+position: relative;
+  z-index: 1;
+  width: min(100%, 440px);
+  padding: 26px;
+  background: var(--surface);
+  border: 1px solid #e5eeed;
+  border-radius: 23px;
+  box-shadow: 0 24px 70px rgb(0 76 76 / 12%);
+}
+
+
+.dashboard-top {
+display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 23px;
+}
+
+
+.dashboard-kicker,
+.welcome-label {
+color: #658381;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+}
+
+
+.dashboard-top h2 {
+margin: 7px 0 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.4px;
+}
+
+
+.dashboard-mark {
+display: grid;
+  width: 43px;
+  height: 43px;
+  place-items: center;
+  color: var(--accent);
+  background: #e7f5f3;
+  border-radius: 13px;
+}
+
+
+.welcome-panel {
+display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 23px 20px;
+  color: white;
+  background: var(--primary);
+  border-radius: 16px;
+}
+
+
+.welcome-label {
+color: #a6e6dd;
+}
+
+
+.welcome-panel h3 {
+max-width: 225px;
+  margin: 10px 0 7px;
+  font-size: 1.2rem;
+  line-height: 1.35;
+}
+
+
+.welcome-panel p {
+margin: 0;
+  color: #c3dedd;
+  font-size: 0.77rem;
+  line-height: 1.6;
+}
+
+
+.welcome-figure {
+display: grid;
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  place-items: center;
+  color: var(--primary);
+  background: var(--aqua);
+  border-radius: 20px;
+  transform: rotate(5deg);
+}
+
+
+.dashboard-section-heading {
+display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 25px 0 13px;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+
+.mini-feature {
+display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #edf1f0;
+}
+
+
+.mini-icon {
+display: grid;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  place-items: center;
+  color: var(--accent);
+  background: #e7f5f3;
+  border-radius: 12px;
+}
+
+
+.mini-icon-light {
+color: #407f7a;
+  background: #e9f0ee;
+}
+
+
+.mini-copy {
+display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 5px;
+}
+
+
+.mini-copy strong {
+font-size: 0.82rem;
+}
+
+
+.mini-copy span {
+color: #758986;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+
+.mini-check {
+flex-shrink: 0;
+  color: var(--accent);
+}
+
+
+.mini-arrow {
+flex-shrink: 0;
+  color: #6d9691;
+}
+
+
+.dashboard-footer {
+display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 19px;
+  color: #718784;
+  font-size: 0.68rem;
+}
+
+
+.dashboard-footer > span:first-child {
+display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+
+.floating-note {
+position: absolute;
+  right: -10px;
+  bottom: 21px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px 17px;
+  background: white;
+  border: 1px solid #e5eeed;
+  border-radius: 15px;
+  box-shadow: 0 12px 35px rgb(0 76 76 / 12%);
+}
+
+
+.floating-note-icon {
+display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  color: var(--accent);
+  background: #e7f5f3;
+  border-radius: 11px;
+}
+
+
+.floating-note > span:last-child {
+display: grid;
+  gap: 4px;
+}
+
+
+.floating-note strong {
+font-size: 0.79rem;
+}
+
+
+.floating-note small {
+color: var(--muted);
+  font-size: 0.7rem;
+}
+
+
+.features-section {
+padding: 83px 24px 91px;
+  background: white;
+  border-top: 1px solid #e9efee;
+}
+
+
+.section-heading {
+max-width: 670px;
+  margin: 0 auto 43px;
+  text-align: center;
+}
+
+
+.section-heading h2,
+.cta-section h2 {
+margin: 14px 0;
+  font-size: clamp(1.9rem, 3.2vw, 2.65rem);
+  line-height: 1.2;
+  letter-spacing: -1.2px;
+}
+
+
+.section-heading > p,
+.cta-section p {
+color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.8;
+}
+
+
+.features-grid {
+display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 23px;
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+
+.feature-card {
+padding: 29px 27px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: white;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+
+.feature-card:hover {
+transform: translateY(-5px);
+  border-color: #a8d7d1;
+  box-shadow: 0 15px 38px rgb(0 76 76 / 7%);
+}
+
+
+.feature-icon {
+display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  color: var(--primary);
+  background: #e5f3f1;
+  border-radius: 15px;
+}
+
+
+.feature-card h3 {
+margin: 23px 0 10px;
+  font-size: 1.15rem;
+  letter-spacing: -0.3px;
+}
+
+
+.feature-card p {
+min-height: 76px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+
+
+.feature-link {
+display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+
+.cta-section {
+display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  width: min(1180px, calc(100% - 48px));
+  margin: 72px auto;
+  padding: 48px 52px;
+  color: white;
+  background: var(--primary);
+  border-radius: 24px;
+}
+
+
+.cta-section .section-label {
+color: #9ce0d7;
+}
+
+
+.cta-section h2 {
+max-width: 650px;
+}
+
+
+.cta-section p {
+max-width: 620px;
+  margin-bottom: 0;
+  color: #c7dedb;
+}
+
+
+@media (max-width: 1000px) {
+.hero {
+grid-template-columns: 1fr 0.9fr;
+    gap: 28px;
+}
+.hero h1 {
+font-size: clamp(2.65rem, 5.2vw, 3.65rem);
+    letter-spacing: -2px;
+}
+.hero-visual {
+min-height: 410px;
+}
+.dashboard-card {
+padding: 21px;
+}
+.floating-note {
+right: -3px;
+}
+}
+
+
+@media (max-width: 760px) {
+.hero {
+grid-template-columns: 1fr;
+    gap: 20px;
+    padding-top: 45px;
+    padding-bottom: 65px;
+}
+.hero h1 {
+max-width: 580px;
+    font-size: clamp(2.7rem, 9vw, 4rem);
+}
+.hero-description {
+font-size: 1rem;
+}
+.hero-visual {
+min-height: 450px;
+    margin-top: 10px;
+}
+.dashboard-card {
+width: min(100%, 440px);
+}
+.floating-note {
+right: max(0px, calc((100% - 420px) / 2));
+    bottom: 0;
+}
+.features-section {
+padding: 68px 24px;
+}
+.features-grid {
+grid-template-columns: 1fr;
+    max-width: 480px;
+}
+.feature-card p {
+min-height: 0;
+}
+.cta-section {
+align-items: flex-start;
+    flex-direction: column;
+    margin: 48px auto;
+    padding: 34px 27px;
+}
+}
+
+
+@media (max-width: 420px) {
+.hero {
+padding-top: 35px;
+}
+.eyebrow {
+font-size: 0.63rem;
+    letter-spacing: 0.9px;
+}
+.hero h1 {
+font-size: 2.55rem;
+    letter-spacing: -1.7px;
+}
+.hero-actions {
+align-items: stretch;
+    flex-direction: column;
+    gap: 17px;
+}
+.hero-actions .text-link {
+text-align: center;
+}
+.hero-trust {
+align-items: flex-start;
+    font-size: 0.79rem;
+    line-height: 1.6;
+}
+.hero-visual {
+min-height: 405px;
+}
+.orbit-one {
+width: 330px;
+    height: 330px;
+}
+.orbit-two {
+width: 275px;
+    height: 275px;
+}
+.dashboard-card {
+padding: 17px;
+    border-radius: 18px;
+}
+.dashboard-top h2 {
+font-size: 1rem;
+}
+.welcome-panel {
+padding: 17px 14px;
+}
+.welcome-panel h3 {
+font-size: 1.03rem;
+}
+.welcome-panel p {
+font-size: 0.7rem;
+}
+.welcome-figure {
+width: 48px;
+    height: 48px;
+}
+.welcome-figure svg {
+width: 31px;
+}
+.mini-copy strong {
+font-size: 0.75rem;
+}
+.mini-copy span {
+font-size: 0.66rem;
+}
+.floating-note {
+right: 0;
+    padding: 11px;
+}
+}
+
+==> ./presentation/types/auth.ts <==
+// Tipo de autenticación
+export type AuthMode = 'login' | 'register'
+
+// Forma del formulario
+export type AuthForm = {
+  name: string
+  email: string
+  phone: string
+  password: string
+  age: string
+  gender: '' | 'FEMENINO' | 'MASCULINO' | 'OTRO'
+  idLocation: string
+}
