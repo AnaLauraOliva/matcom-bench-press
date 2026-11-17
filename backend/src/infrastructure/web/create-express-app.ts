@@ -1,16 +1,34 @@
 import express, { type ErrorRequestHandler, type Express } from "express";
+import swaggerUi from "swagger-ui-express";
 import { errorResponse } from "../../interfaces/http/http-responses.js";
 import type { IHttpController } from "../../interfaces/http/http-types.js";
+import { API_ROUTES, type ApiControllers, type ApiRouteDoc } from "../../interfaces/http/api-routes.js";
+import { openApiDocument } from "../../interfaces/http/openapi.js";
 import { sendHttpResponse, toExpressHandler } from "./express-route-handler.js";
 import cors from 'cors';
 import { env } from "../../config/env.js";
-export interface Controllers {
-    readonly login: IHttpController;
-    readonly registerUser: IHttpController;
-    readonly listLocations: IHttpController;
-    readonly getUser: IHttpController;
-    readonly deleteUser: IHttpController;
-    readonly deactivateUser: IHttpController;
+export type Controllers = ApiControllers;
+
+function mountApiRoute(
+    app: Express,
+    route: ApiRouteDoc,
+    controller: IHttpController,
+): void {
+    const handler = toExpressHandler(controller);
+    switch (route.method) {
+        case "get":
+            app.get(route.path, handler);
+            break;
+        case "post":
+            app.post(route.path, handler);
+            break;
+        case "patch":
+            app.patch(route.path, handler);
+            break;
+        case "delete":
+            app.delete(route.path, handler);
+            break;
+    }
 }
 // Errores que no son de negocio: JSON mal formado y fallos inesperados.
 const handleUnexpectedErrors: ErrorRequestHandler = (
@@ -44,15 +62,17 @@ export function createExpressApp(controllers: Controllers): Express {
         credentials: true,
     }));
     app.use(express.json());
-    app.post("/api/auth/login", toExpressHandler(controllers.login));
-    app.post("/api/auth/register", toExpressHandler(controllers.registerUser));
-    app.get("/api/locations", toExpressHandler(controllers.listLocations));
-    app.get("/api/users/:id", toExpressHandler(controllers.getUser));
-    app.delete("/api/users/:id", toExpressHandler(controllers.deleteUser)); // borrado real
-    app.patch(
-        "/api/users/:id/deactivate",
-        toExpressHandler(controllers.deactivateUser),
-    ); // borrado lógico
+    for (const route of API_ROUTES) {
+        mountApiRoute(app, route, controllers[route.controller]);
+    }
+    app.get("/openapi.json", (_req, res) => res.json(openApiDocument));
+    app.use(
+        "/api-docs",
+        swaggerUi.serve,
+        swaggerUi.setup(openApiDocument, {
+            customSiteTitle: "Bench Press API · Documentación",
+        }),
+    );
     app.use((_req, res) => {
         sendHttpResponse(
             res,
