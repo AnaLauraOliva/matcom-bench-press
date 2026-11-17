@@ -1,4 +1,10 @@
 // Formato del documento tal como se guarda en MongoDB (colección "rutina_estructura")
+//
+// La estructura de una rutina es variable: depende del entrenador y del objetivo
+// del cliente. Una rutina puede tener pocos bloques simples (calentamiento,
+// serie, descanso), y otra puede anidar múltiples circuitos con distintas
+// repeticiones y tiempos de descanso; por eso un bloque puede contener
+// ejercicios, otros bloques, o ambos.
 
 export type BlockTypeDocument = 'calentamiento' | 'circuito' | 'serie' | 'descanso';
 export type IntensityDocument = 'bajo' | 'medio' | 'alto';
@@ -19,6 +25,9 @@ export interface IBlockDocument {
     repeticiones: number | null;
     descanso: number | null;
     ejercicios: IExerciseDocument[];
+    // Bloques anidados dentro de este bloque (p. ej. varios circuitos dentro de
+    // un circuito), cada uno con sus propias repeticiones y descansos.
+    bloques?: IBlockDocument[];
 }
 
 export interface IRoutineStructureDocument {

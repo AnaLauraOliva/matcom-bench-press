@@ -7,6 +7,10 @@ import type {
 
 export const ROUTINE_STRUCTURE_COLLECTION = "rutina_estructura";
 
+// Deben coincidir con BlockTypeDocument e IntensityDocument.
+const BLOCK_TYPES = ["calentamiento", "circuito", "serie", "descanso"] as const;
+const INTENSITY_LEVELS = ["bajo", "medio", "alto"] as const;
+
 const exerciseSchema = new Schema<IExerciseDocument>(
     {
         id_ejercicio: Number,
@@ -14,14 +18,20 @@ const exerciseSchema = new Schema<IExerciseDocument>(
         series: Number,
         repeticiones: Number,
         tiempo: Number,
-        nivel_intensidad: String,
+        nivel_intensidad: {
+            type: String,
+            enum: [...INTENSITY_LEVELS],
+        },
     },
     { _id: false },
 );
 
 const blockSchema = new Schema<IBlockDocument>(
     {
-        tipo: String,
+        tipo: {
+            type: String,
+            enum: [...BLOCK_TYPES],
+        },
         orden: Number,
         duracion: Number,
         repeticiones: Number,
@@ -30,6 +40,13 @@ const blockSchema = new Schema<IBlockDocument>(
     },
     { _id: false },
 );
+
+// La cantidad y composición de bloques cambia según el entrenador y el objetivo
+// del cliente, así que un bloque puede anidar otros bloques (p. ej. varios
+// circuitos con distintas repeticiones y descansos dentro de un circuito).
+blockSchema.add({
+    bloques: { type: [blockSchema], default: undefined },
+});
 
 const routineStructureSchema = new Schema<IRoutineStructureDocument>(
     {
