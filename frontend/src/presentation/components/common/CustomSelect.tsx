@@ -1,6 +1,6 @@
-
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
+
 
 // Define la estructura de cada opción del selector.
 export type SelectOption = {

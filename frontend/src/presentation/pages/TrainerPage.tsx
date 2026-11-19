@@ -20,13 +20,17 @@ import {
 } from 'lucide-react'
 
 import { GetTrainerDashboard } from '../../application/use-cases/trainer/GetTrainerDashboard'
+import { CreateExercise } from '../../application/use-cases/exercises/CreateExercise'
+import { GetExercises } from '../../application/use-cases/exercises/GetExercises'
+import { GetMuscleGroups } from '../../application/use-cases/exercises/GetMuscleGroups'
 import { MockTrainerDashboardRepository } from '../../infrastructure/repositories/MockTrainerDashboardRepository'
-import type {
-  Exercise,
-  TrainingRoutine,
-  TrainerDashboard,
-} from '../../domain/entities/TrainerDashboard'
+import { createExerciseRepository } from '../../infrastructure/repositories/exerciseRepositoryFactory'
+import type { TrainingRoutine, TrainerDashboard } from '../../domain/entities/TrainerDashboard'
+import type { CreateExerciseInput, Exercise, MuscleGroup } from '../../domain/entities/Exercise'
 import { useAuthSession } from '../contexts/useAuthSession'
+
+import CustomSelect from '../components/common/CustomSelect'
+import WorkInProgressNotice from '../components/WorkInProgressNotice'
 
 type TrainerSection =
   | 'overview'
@@ -38,6 +42,10 @@ type TrainerSection =
 
 const dashboardRepository = new MockTrainerDashboardRepository()
 const getTrainerDashboard = new GetTrainerDashboard(dashboardRepository)
+const exerciseRepository = createExerciseRepository()
+const getExercises = new GetExercises(exerciseRepository)
+const getMuscleGroups = new GetMuscleGroups(exerciseRepository)
+const createExercise = new CreateExercise(exerciseRepository)
 
 /**
  * Convierte el estado de una rutina en una etiqueta visual consistente.
@@ -68,6 +76,8 @@ function TrainerPage() {
   const [dashboard, setDashboard] = useState<TrainerDashboard | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([])
+  const [exerciseLoading, setExerciseLoading] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [reviewedRoutineIds, setReviewedRoutineIds] = useState<number[]>([])
   const [generated, setGenerated] = useState(false)
@@ -75,12 +85,26 @@ function TrainerPage() {
   useEffect(() => {
     let isMounted = true
 
-    getTrainerDashboard.execute()
-      .then((data) => {
-        if (isMounted) setDashboard(data)
+    Promise.all([
+      getTrainerDashboard.execute(),
+      getExercises.execute(),
+      getMuscleGroups.execute(),
+    ])
+      .then(([data, exercises, groups]) => {
+        if (!isMounted) return
+        setDashboard({
+          ...data,
+          exercises,
+          summary: { ...data.summary, registeredExercises: exercises.length },
+        })
+        setMuscleGroups(groups)
+        setExerciseLoading(false)
       })
       .catch(() => {
-        if (isMounted) setLoadError('No se pudo cargar la información del panel.')
+        if (isMounted) {
+          setLoadError('No se pudo cargar la información del panel o del banco de ejercicios.')
+          setExerciseLoading(false)
+        }
       })
 
     return () => {
@@ -103,7 +127,7 @@ function TrainerPage() {
     if (!normalizedSearch) return exercises
 
     return exercises.filter((exercise) =>
-      `${exercise.name} ${exercise.muscleGroup} ${exercise.type} ${exercise.intensity}`
+      `${exercise.name} ${exercise.muscleGroups.map((group) => group.name).join(' ')} ${exercise.type}`
         .toLocaleLowerCase()
         .includes(normalizedSearch),
     )
@@ -121,21 +145,16 @@ function TrainerPage() {
     )
   }
 
-  /**
-   * Incorpora un ejercicio a los datos locales de demostración.
-   * La persistencia definitiva se implementará mediante el backend.
-   */
-  const addExercise = (exercise: Omit<Exercise, 'id'>) => {
+  /** Registra el ejercicio mediante el adaptador seleccionado (mock o HTTP). */
+  const addExercise = async (input: CreateExerciseInput) => {
+    const exercise = await createExercise.execute(input)
     setDashboard((current) => {
       if (!current) return current
-      const nextId = Math.max(0, ...current.exercises.map((item) => item.id)) + 1
+      const exercises = [...current.exercises, exercise]
       return {
         ...current,
-        exercises: [...current.exercises, { ...exercise, id: nextId }],
-        summary: {
-          ...current.summary,
-          registeredExercises: current.summary.registeredExercises + 1,
-        },
+        exercises,
+        summary: { ...current.summary, registeredExercises: exercises.length },
       }
     })
   }
@@ -299,6 +318,9 @@ function TrainerPage() {
 
           <div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
             <div className="mb-8">
+              {section != "exercises" && (
+              <WorkInProgressNotice />
+            )}
               <p className="mb-2 text-xs font-bold uppercase tracking-[1.6px] text-[#00a699]">
                 {section === 'review' ? 'Control de calidad' : 'Tu espacio de trabajo'}
               </p>
@@ -319,8 +341,8 @@ function TrainerPage() {
             )}
 
             {!dashboard ? (
-              <div className="rounded-2xl border border-[#e3ecea] bg-white p-8 text-sm text-[#718783]">
-                Cargando información del panel…
+              <div role={loadError ? 'alert' : undefined} className="rounded-2xl border border-[#e3ecea] bg-white p-8 text-sm text-[#718783]">
+                {loadError ? 'No se pudo cargar el panel. Revisa la conexión con el servidor e inténtalo de nuevo.' : 'Cargando información del panel…'}
               </div>
             ) : (
               <>
@@ -339,6 +361,8 @@ function TrainerPage() {
                     searchTerm={searchTerm}
                     onSearchChange={setSearchTerm}
                     onAddExercise={addExercise}
+                    muscleGroups={muscleGroups}
+                    isLoading={exerciseLoading}
                   />
                 )}
 
@@ -494,52 +518,92 @@ function QuickAction({
   )
 }
 
-/** Permite explorar el banco de ejercicios y filtrar sus registros. */
+/** Permite consultar, buscar y registrar ejercicios en el banco. */
 function ExercisesSection({
   exercises,
   searchTerm,
   onSearchChange,
   onAddExercise,
+  muscleGroups,
+  isLoading,
 }: {
   exercises: Exercise[]
   searchTerm: string
   onSearchChange: (value: string) => void
-  onAddExercise: (exercise: Omit<Exercise, 'id'>) => void
+  onAddExercise: (input: CreateExerciseInput) => Promise<void>
+  muscleGroups: MuscleGroup[]
+  isLoading: boolean
 }) {
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
-  const [muscleGroup, setMuscleGroup] = useState('Piernas')
   const [type, setType] = useState<Exercise['type']>('Fuerza')
-  const [intensity, setIntensity] = useState<Exercise['intensity']>('Media')
+  const [description, setDescription] = useState('')
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([])
+  const [isSaving, setIsSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null)
+  
+  const toggleMuscleGroup = (groupId: number) => {
+    setSelectedGroupIds((current) => current.includes(groupId)
+      ? current.filter((id) => id !== groupId)
+      : [...current, groupId])
+  }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const trimmedName = name.trim()
-    if (!trimmedName) return
-    onAddExercise({ name: trimmedName, muscleGroup, type, intensity })
-    setName('')
-    setShowForm(false)
+
+    if (!trimmedName || !description.trim() || selectedGroupIds.length === 0) {
+      setFormError('Indica un nombre, una descripción y selecciona al menos un grupo muscular.')
+      return
+    }
+
+    setIsSaving(true)
+    setFormError(null)
+    try {
+      await onAddExercise({
+        name: trimmedName,
+        description,
+        type,
+        muscleGroupIds: selectedGroupIds,
+      })
+      setName('')
+      setDescription('')
+      setType('Fuerza')
+      setSelectedGroupIds([])
+      setShowForm(false)
+    } catch {
+      setFormError('No se pudo registrar el ejercicio. Comprueba los datos e inténtalo de nuevo.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
     <section className="rounded-2xl border border-[#e3ecea] bg-white p-5 sm:p-6">
       <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
+        <div className="shrink-0">
           <h2 className="font-bold text-[#214c48]">Ejercicios registrados</h2>
-          <p className="mt-1 text-xs text-[#91a29f]">{exercises.length} ejercicios encontrados</p>
+          <p className="mt-1 text-xs text-[#91a29f]">
+            {exercises.length} ejercicios encontrados
+          </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <label className="relative block w-full sm:max-w-xs">
+
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row">
+          <label className="relative block w-full min-w-0 flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#91a29f]" />
             <input
               value={searchTerm}
               onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="Buscar ejercicio..."
+              placeholder="Buscar ejercicio o listar por grupo muscular o tipo"
+              aria-label="Buscar ejercicios"
               className="w-full rounded-xl border border-[#dce8e7] bg-[#fbfdfc] py-2.5 pl-9 pr-3 text-sm outline-none transition placeholder:text-[#a3b2af] focus:border-[#00a699] focus:ring-2 focus:ring-[#00a699]/10"
             />
           </label>
+
           <button
-            onClick={() => setShowForm((current) => !current)}
+            type="button"
+            onClick={() => { setShowForm((current) => !current); setFormError(null) }}
             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#004c4c] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#00645d]"
           >
             {showForm ? <X size={16} /> : <Plus size={16} />}
@@ -547,53 +611,119 @@ function ExercisesSection({
           </button>
         </div>
       </div>
+
       {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 grid gap-3 rounded-xl border border-[#dce8e7] bg-[#f8fbfa] p-4 sm:grid-cols-2">
+        <form onSubmit={handleSubmit} className="mb-6 grid gap-4 rounded-xl border border-[#dce8e7] bg-[#f8fbfa] p-4 sm:grid-cols-2">
           <label className="text-xs font-semibold text-[#52716d] sm:col-span-2">
             Nombre del ejercicio
-            <input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Press de banca" className="mt-2 w-full rounded-lg border border-[#dce8e7] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[#00a699]" />
+            <input required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Press de banca" className="mt-2 w-full rounded-lg border border-[#dce8e7] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[#00a699]" />
           </label>
+
+          <label className="text-xs font-semibold text-[#52716d] sm:col-span-2">
+            Descripción del ejercicio
+
+            <textarea
+              required
+              maxLength={300}
+              rows={3}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Describe cómo se realiza el ejercicio..."
+              className="mt-2 w-full resize-none rounded-lg border border-[#dce8e7] bg-white px-3 py-2.5 text-sm font-normal outline-none transition focus:border-[#00a699] focus:ring-2 focus:ring-[#00a699]/10"
+            />
+
+            <span className="mt-1 flex justify-end font-normal text-[#91a29f]">
+              {description.length}/300 caracteres
+            </span>
+          </label>
+
           <label className="text-xs font-semibold text-[#52716d]">
-            Grupo muscular
-            <input required value={muscleGroup} onChange={(event) => setMuscleGroup(event.target.value)} className="mt-2 w-full rounded-lg border border-[#dce8e7] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[#00a699]" />
+            Tipo de ejercicio
+
+            <div className="mt-2">
+              <CustomSelect
+                value={type}
+                options={[
+                  { value: 'Fuerza', label: 'Fuerza' },
+                  { value: 'Cardio', label: 'Cardio' },
+                  { value: 'Flexibilidad', label: 'Flexibilidad' },
+                ]}
+                placeholder="Selecciona un tipo"
+                onChange={(value) => setType(value as Exercise['type'])}
+              />
+            </div>
           </label>
-          <label className="text-xs font-semibold text-[#52716d]">
-            Tipo
-            <select value={type} onChange={(event) => setType(event.target.value as Exercise['type'])} className="mt-2 w-full rounded-lg border border-[#dce8e7] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[#00a699]">
-              <option>Fuerza</option><option>Cardio</option><option>Flexibilidad</option>
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-[#52716d]">
-            Intensidad
-            <select value={intensity} onChange={(event) => setIntensity(event.target.value as Exercise['intensity'])} className="mt-2 w-full rounded-lg border border-[#dce8e7] bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-[#00a699]">
-              <option>Baja</option><option>Media</option><option>Alta</option>
-            </select>
-          </label>
-          <div className="flex items-end">
-            <button type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#008d82] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#00776e]">
-              <Plus size={15} /> Guardar ejercicio
+
+          <div className="text-xs font-semibold text-[#52716d] sm:col-span-2">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span>Grupos musculares</span>
+              <span className="font-normal text-[#91a29f]">Puedes seleccionar varios</span>
+            </div>
+            {isLoading ? (
+              <p className="rounded-lg border border-[#dce8e7] bg-white p-3 font-normal text-[#718783]">Cargando grupos musculares…</p>
+            ) : muscleGroups.length === 0 ? (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 font-normal text-amber-800">No hay grupos musculares disponibles.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 rounded-lg border border-[#dce8e7] bg-white p-3 sm:grid-cols-3">
+                {muscleGroups.map((group) => {
+                  const selected = selectedGroupIds.includes(group.id)
+                  return (
+                    <label key={group.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2 font-medium transition ${selected ? 'border-[#00a699] bg-[#eaf6f4] text-[#00645d]' : 'border-[#edf2f1] text-[#607976] hover:border-[#b2d8d8]'}`}>
+                      <input type="checkbox" checked={selected} onChange={() => toggleMuscleGroup(group.id)} className="size-4 accent-[#008d82]" />
+                      <span>{group.name}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+          {selectedGroupIds.length > 0 && (
+            <p className="text-xs font-normal text-[#718783] sm:col-span-2">
+              Seleccionados: {muscleGroups.filter((group) => selectedGroupIds.includes(group.id)).map((group) => group.name).join(', ')}
+            </p>
+          )}
+          {formError && <p role="alert" className="text-sm text-rose-700 sm:col-span-2">{formError}</p>}
+          <div className="sm:col-span-2">
+            <button type="submit" disabled={isSaving || isLoading || muscleGroups.length === 0} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#008d82] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#00776e] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
+              <Plus size={15} /> {isSaving ? 'Guardando…' : 'Guardar ejercicio'}
             </button>
           </div>
         </form>
       )}
-      {exercises.length ? (
+
+      {isLoading ? (
+        <div className="py-12 text-center text-sm text-[#91a29f]">Cargando ejercicios…</div>
+      ) : exercises.length ? (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[620px] text-left text-sm">
+          <table className="w-full min-w-[600px] text-left text-sm">
             <thead>
               <tr className="border-b border-[#edf2f1] text-[11px] uppercase tracking-wider text-[#91a29f]">
                 <th className="px-3 py-3 font-bold">Ejercicio</th>
-                <th className="px-3 py-3 font-bold">Grupo muscular</th>
+                <th className="px-3 py-3 font-bold">Descripción</th>
+                <th className="px-3 py-3 font-bold">Grupos musculares</th>
                 <th className="px-3 py-3 font-bold">Tipo</th>
-                <th className="px-3 py-3 font-bold">Intensidad</th>
               </tr>
             </thead>
             <tbody>
               {exercises.map((exercise) => (
                 <tr key={exercise.id} className="border-b border-[#f0f4f3] last:border-0">
                   <td className="px-3 py-4 font-semibold text-[#315652]">{exercise.name}</td>
-                  <td className="px-3 py-4 text-[#718783]">{exercise.muscleGroup}</td>
+                  <td className="px-3 py-4">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedExercise(exercise)}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#008d82] transition hover:text-[#004c4c]"
+                    >
+                      <BookOpen size={15} />
+                      Leer descripción
+                    </button>
+                  </td>
+                  <td className="px-3 py-4 text-[#718783]">
+                    <div className="flex flex-wrap gap-1.5">
+                      {exercise.muscleGroups.map((group) => <span key={group.id} className="rounded-full bg-[#edf7f5] px-2.5 py-1 text-xs text-[#39716b]">{group.name}</span>)}
+                    </div>
+                  </td>
                   <td className="px-3 py-4 text-[#718783]">{exercise.type}</td>
-                  <td className="px-3 py-4"><IntensityLabel intensity={exercise.intensity} /></td>
                 </tr>
               ))}
             </tbody>
@@ -602,19 +732,65 @@ function ExercisesSection({
       ) : (
         <div className="py-12 text-center text-sm text-[#91a29f]">No hay ejercicios que coincidan con la búsqueda.</div>
       )}
+
+      {selectedExercise && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSelectedExercise(null)
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="exercise-description-title"
+            className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3
+                  id="exercise-description-title"
+                  className="text-lg font-bold text-[#214c48]"
+                >
+                  {selectedExercise.name}
+                </h3>
+
+                <p className="mt-1 text-xs text-[#91a29f]">
+                  Descripción del ejercicio
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedExercise(null)}
+                aria-label="Cerrar descripción"
+                className="rounded-lg p-2 text-[#718783] transition hover:bg-[#f0f5f4]"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-xl bg-[#f8fbfa] p-4">
+              <p className="whitespace-pre-wrap break-words text-sm leading-7 text-[#52716d]">
+                {selectedExercise.description}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectedExercise(null)}
+              className="mt-5 w-full rounded-lg bg-[#004c4c] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#00645d]"
+            >
+              Cerrar
+            </button>
+          </section>
+        </div>
+      )}
+
     </section>
   )
-}
-
-/** Etiqueta visual para los niveles de intensidad de los ejercicios. */
-function IntensityLabel({ intensity }: { intensity: Exercise['intensity'] }) {
-  const classes = {
-    Baja: 'bg-emerald-50 text-emerald-700',
-    Media: 'bg-amber-50 text-amber-700',
-    Alta: 'bg-rose-50 text-rose-700',
-  }
-
-  return <span className={`rounded-full px-3 py-1 text-xs font-semibold ${classes[intensity]}`}>{intensity}</span>
 }
 
 /** Presenta los criterios básicos para iniciar la generación de una rutina. */

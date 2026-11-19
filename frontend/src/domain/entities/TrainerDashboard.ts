@@ -1,3 +1,5 @@
+import type { Exercise } from './Exercise'
+
 /**
  * Información resumida que necesita el panel principal del entrenador.
  * Los datos son independientes de la tecnología utilizada para obtenerlos.
@@ -9,14 +11,7 @@ export type TrainerDashboardSummary = {
   registeredExercises: number
 }
 
-/** Representa un ejercicio disponible en el banco de ejercicios. */
-export type Exercise = {
-  id: number
-  name: string
-  muscleGroup: string
-  type: 'Fuerza' | 'Cardio' | 'Flexibilidad'
-  intensity: 'Baja' | 'Media' | 'Alta'
-}
+export type { Exercise } from './Exercise'
 
 /** Representa una rutina que puede consultarse desde el panel. */
 export type TrainingRoutine = {

@@ -49,11 +49,11 @@ export class MockTrainerDashboardRepository
         },
       ],
       exercises: [
-        { id: 1, name: 'Sentadilla', muscleGroup: 'Piernas', type: 'Fuerza', intensity: 'Alta' },
-        { id: 2, name: 'Flexiones', muscleGroup: 'Pecho', type: 'Fuerza', intensity: 'Media' },
-        { id: 3, name: 'Plancha', muscleGroup: 'Abdomen', type: 'Fuerza', intensity: 'Media' },
-        { id: 4, name: 'Caminata rápida', muscleGroup: 'Cuerpo completo', type: 'Cardio', intensity: 'Baja' },
-        { id: 5, name: 'Estiramiento de isquiotibiales', muscleGroup: 'Piernas', type: 'Flexibilidad', intensity: 'Baja' },
+        { id: 1, name: 'Sentadilla', type: 'Fuerza', muscleGroups: [{ id: 7, name: 'Cuádriceps' }, { id: 9, name: 'Glúteos' }] },
+        { id: 2, name: 'Flexiones', type: 'Fuerza', muscleGroups: [{ id: 1, name: 'Pecho' }, { id: 5, name: 'Tríceps' }, { id: 3, name: 'Hombros' }] },
+        { id: 3, name: 'Plancha', type: 'Fuerza', muscleGroups: [{ id: 6, name: 'Abdomen' }] },
+        { id: 4, name: 'Caminata rápida', type: 'Cardio', muscleGroups: [{ id: 7, name: 'Cuádriceps' }, { id: 8, name: 'Isquiotibiales' }] },
+        { id: 5, name: 'Estiramiento de isquiotibiales', type: 'Flexibilidad', muscleGroups: [{ id: 8, name: 'Isquiotibiales' }] },
       ],
       routinesToReview: [
         {
