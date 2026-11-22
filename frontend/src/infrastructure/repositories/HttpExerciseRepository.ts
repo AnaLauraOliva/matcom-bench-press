@@ -37,7 +37,7 @@ export class HttpExerciseRepository implements ExerciseRepository {
       name: input.name.trim(),
       description: input.description,
       type: typeToApi[input.type],
-      intensity: intensityToApi[input.intensity],
+      intensity: intensityToApi['Bajo'],
       muscleGroupIds: input.muscleGroupIds,
     })
 

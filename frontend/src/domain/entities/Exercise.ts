@@ -23,11 +23,10 @@ export type Exercise = {
   muscleGroups: MuscleGroup[]
 }
 
-/** Datos necesarios para registrar un ejercicio. */
+/** Datos necesarios para registrar un ejercicio. La intensidad se asigna por rutina. */
 export type CreateExerciseInput = {
   name: string
   description: string
   type: ExerciseType
-  intensity: IntensityLevel
   muscleGroupIds: number[]
 }

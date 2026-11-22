@@ -3,7 +3,11 @@ import type { GenerateRoutinePort } from '../../ports/GenerateRoutinePort'
 
 /** Genera una rutina a partir de los parámetros de creación. */
 export class GenerateRoutine {
-  constructor(private readonly port: GenerateRoutinePort) {}
+  private readonly port: GenerateRoutinePort
+
+  constructor(port: GenerateRoutinePort) {
+    this.port = port
+  }
 
   execute(request: GenerateRoutineRequest): Promise<GeneratedRoutine> {
     return this.port.generate(request)

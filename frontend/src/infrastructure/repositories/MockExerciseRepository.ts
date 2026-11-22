@@ -55,7 +55,7 @@ export class MockExerciseRepository implements ExerciseRepository {
       name: input.name.trim(),
       description: input.description,
       type: input.type,
-      intensity: input.intensity,
+      intensity: 'Bajo',
       muscleGroups: selectedGroups,
     }
 
