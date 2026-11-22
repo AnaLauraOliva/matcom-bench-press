@@ -364,7 +364,7 @@ border-color: var(--accent);
 }
 
 
-.auth-form .age-input {
+.age-input {
 flex: 1;
   width: 0;
   min-width: 0;
@@ -380,15 +380,15 @@ flex: 1;
 }
 
 
-.auth-form .age-input:focus {
+.age-input:focus {
 border: 0;
   box-shadow: none;
 }
 
 
 /* Ocultar las flechas nativas del input numérico */
-.auth-form .age-input::-webkit-inner-spin-button,
-.auth-form .age-input::-webkit-outer-spin-button {
+.age-input::-webkit-inner-spin-button,
+.age-input::-webkit-outer-spin-button {
 margin: 0;
   -webkit-appearance: none;
 }
@@ -397,7 +397,7 @@ margin: 0;
 .age-buttons {
 display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
   gap: 2px;
   padding: 4px;
   background: #e8f5f3;

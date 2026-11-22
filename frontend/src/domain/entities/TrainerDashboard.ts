@@ -13,6 +13,15 @@ export type TrainerDashboardSummary = {
 
 export type { Exercise } from './Exercise'
 
+/** Programa de entrenamiento registrado en la plataforma. */
+export type TrainingProgram = {
+  id: number
+  name: string
+  active: boolean
+  objetive: string
+  desciption: string
+}
+
 /** Representa una rutina que puede consultarse desde el panel. */
 export type TrainingRoutine = {
   id: number
@@ -26,6 +35,7 @@ export type TrainingRoutine = {
 /** Datos necesarios para construir el resumen del panel del entrenador. */
 export type TrainerDashboard = {
   summary: TrainerDashboardSummary
+  programs: TrainingProgram[]
   recentRoutines: TrainingRoutine[]
   exercises: Exercise[]
   routinesToReview: TrainingRoutine[]

@@ -21,11 +21,13 @@ const muscleGroups: MuscleGroup[] = [
 /** Repositorio en memoria para probar el flujo sin disponer del backend. */
 export class MockExerciseRepository implements ExerciseRepository {
   private exercises: Exercise[] = [
-    { id: 1, name: 'Sentadilla', description: 'Ejercicio de fuerza que consiste en flexionar las rodillas y las caderas para descender el cuerpo y volver a la posición inicial.' ,type: 'Fuerza', muscleGroups: [muscleGroups[6], muscleGroups[8]] },
-    { id: 2, name: 'Flexiones', description: 'Ejercicio de fuerza que trabaja principalmente el pecho, los hombros y los tríceps utilizando el peso corporal.' ,type: 'Fuerza', muscleGroups: [muscleGroups[0], muscleGroups[4], muscleGroups[2]] },
-    { id: 3, name: 'Plancha', description: "Ejercicio isométrico que fortalece el abdomen y mejora la estabilidad del core.", type: 'Fuerza', muscleGroups: [muscleGroups[5]] },
-    { id: 4, name: 'Caminata rápida', description: "Actividad cardiovascular que mejora la resistencia física y favorece la salud del corazón.",type: 'Cardio', muscleGroups: [muscleGroups[6], muscleGroups[7], muscleGroups[8]] },
-    { id: 5, name: 'Estiramiento de isquiotibiales', description: "Ejercicio de flexibilidad que ayuda a elongar los músculos posteriores del muslo y mejorar la movilidad.",type: 'Flexibilidad', muscleGroups: [muscleGroups[7]] },
+    { id: 1, name: 'Sentadilla', description: 'Ejercicio de fuerza que consiste en flexionar las rodillas y las caderas para descender el cuerpo y volver a la posición inicial.' ,type: 'Fuerza', intensity: 'Bajo', muscleGroups: [muscleGroups[6], muscleGroups[8]] },
+    { id: 2, name: 'Flexiones', description: 'Ejercicio de fuerza que trabaja principalmente el pecho, los hombros y los tríceps utilizando el peso corporal.' ,type: 'Fuerza', intensity: 'Medio', muscleGroups: [muscleGroups[0], muscleGroups[4], muscleGroups[2]] },
+    { id: 3, name: 'Plancha', description: "Ejercicio isométrico que fortalece el abdomen y mejora la estabilidad del core.", type: 'Fuerza', intensity: 'Bajo', muscleGroups: [muscleGroups[5]] },
+    { id: 4, name: 'Caminata rápida', description: "Actividad cardiovascular que mejora la resistencia física y favorece la salud del corazón.", type: 'Cardio', intensity: 'Alto', muscleGroups: [muscleGroups[6], muscleGroups[7], muscleGroups[8]] },
+    { id: 5, name: 'Estiramiento de isquiotibiales', description: "Ejercicio de flexibilidad que ayuda a elongar los músculos posteriores del muslo y mejorar la movilidad.", type: 'Flexibilidad', intensity: 'Bajo', muscleGroups: [muscleGroups[7]] },
+    { id: 6, name: 'Sentadilla con mancuerna', description: 'Ejercicio de fuerza que flexiona las rodillas y las caderas utilizando una mancuerna para mayor resistencia.', type: 'Fuerza', intensity: 'Medio', muscleGroups: [muscleGroups[6], muscleGroups[8]] },
+    { id: 7, name: 'Dominadas', description: 'Ejercicio de fuerza que fortalece la espalda y los bíceps con el cuerpo y tirando del bar hasta la altura de los hombros.', type: 'Fuerza', intensity: 'Alto', muscleGroups: [muscleGroups[1], muscleGroups[3]] },
   ]
 
   async getAll(): Promise<Exercise[]> {
@@ -53,6 +55,7 @@ export class MockExerciseRepository implements ExerciseRepository {
       name: input.name.trim(),
       description: input.description,
       type: input.type,
+      intensity: input.intensity,
       muscleGroups: selectedGroups,
     }
 

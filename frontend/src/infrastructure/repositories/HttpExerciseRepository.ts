@@ -3,57 +3,23 @@ import type { ExerciseRepository } from '../../application/ports/ExerciseReposit
 import type {
   CreateExerciseInput,
   Exercise,
-  ExerciseType,
   MuscleGroup,
 } from '../../domain/entities/Exercise'
-
-type ApiExerciseType = 'FUERZA' | 'CARDIO' | 'FLEXIBILIDAD'
-
-type ApiMuscleGroup = {
-  idGroup: number
-  name: string
-}
-
-type ApiExercise = {
-  idExercise: number
-  name: string
-  description: string
-  type: ApiExerciseType
-  muscleGroups: ApiMuscleGroup[]
-}
-
-const typeToApi: Record<ExerciseType, ApiExerciseType> = {
-  Fuerza: 'FUERZA',
-  Cardio: 'CARDIO',
-  Flexibilidad: 'FLEXIBILIDAD',
-}
-
-const typeFromApi: Record<ApiExerciseType, ExerciseType> = {
-  FUERZA: 'Fuerza',
-  CARDIO: 'Cardio',
-  FLEXIBILIDAD: 'Flexibilidad',
-}
-
-function mapMuscleGroup(group: ApiMuscleGroup): MuscleGroup {
-  return { id: group.idGroup, name: group.name }
-}
-
-function mapExercise(exercise: ApiExercise): Exercise {
-  return {
-    id: exercise.idExercise,
-    name: exercise.name,
-    description: exercise.description,
-    type: typeFromApi[exercise.type],
-    muscleGroups: exercise.muscleGroups.map(mapMuscleGroup),
-  }
-}
+import {
+  intensityToApi,
+  mapExercise,
+  mapMuscleGroup,
+  type ApiExercise,
+  type ApiMuscleGroup,
+  typeToApi
+} from './httpMappers'
 
 /**
  * Adaptador HTTP del banco de ejercicios.
  *
  * Contrato esperado del backend: GET /exercises devuelve { exercises },
  * GET /muscle-groups devuelve { muscleGroups } y POST /exercises recibe
- * { name, type, muscleGroupIds } y devuelve { exercise }.
+ * { name, type, intensity, muscleGroupIds } y devuelve { exercise }.
  */
 export class HttpExerciseRepository implements ExerciseRepository {
   async getAll(): Promise<Exercise[]> {
@@ -71,6 +37,7 @@ export class HttpExerciseRepository implements ExerciseRepository {
       name: input.name.trim(),
       description: input.description,
       type: typeToApi[input.type],
+      intensity: intensityToApi[input.intensity],
       muscleGroupIds: input.muscleGroupIds,
     })
 

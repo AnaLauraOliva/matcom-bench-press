@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   ClipboardCheck,
   Dumbbell,
-  Filter,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -17,20 +16,34 @@ import {
   Sparkles,
   Users,
   X,
+  BicepsFlexed,
 } from 'lucide-react'
 
 import { GetTrainerDashboard } from '../../application/use-cases/trainer/GetTrainerDashboard'
 import { CreateExercise } from '../../application/use-cases/exercises/CreateExercise'
 import { GetExercises } from '../../application/use-cases/exercises/GetExercises'
 import { GetMuscleGroups } from '../../application/use-cases/exercises/GetMuscleGroups'
+import { GenerateRoutine } from '../../application/use-cases/routines/GenerateRoutine'
 import { MockTrainerDashboardRepository } from '../../infrastructure/repositories/MockTrainerDashboardRepository'
 import { createExerciseRepository } from '../../infrastructure/repositories/exerciseRepositoryFactory'
-import type { TrainingRoutine, TrainerDashboard } from '../../domain/entities/TrainerDashboard'
-import type { CreateExerciseInput, Exercise, MuscleGroup } from '../../domain/entities/Exercise'
+import { createGenerateRoutinePort } from '../../infrastructure/repositories/generateRoutineFactory'
+import type { TrainingRoutine, TrainerDashboard, TrainingProgram } from '../../domain/entities/TrainerDashboard'
+import type {
+  CreateExerciseInput,
+  Exercise,
+  ExerciseType,
+  IntensityLevel,
+  MuscleGroup,
+} from '../../domain/entities/Exercise'
+import type { GeneratedRoutine } from '../../domain/entities/GeneratedRoutine'
+import { INTENSITY_LEVELS } from '../../domain/entities/Exercise'
 import { useAuthSession } from '../contexts/useAuthSession'
 
+import AgeInput from '../components/common/AgeInput'
 import CustomSelect from '../components/common/CustomSelect'
 import WorkInProgressNotice from '../components/WorkInProgressNotice'
+import BackendIntegrationNotice from '../components/BackendIntegrationNotice'
+
 
 type TrainerSection =
   | 'overview'
@@ -46,6 +59,7 @@ const exerciseRepository = createExerciseRepository()
 const getExercises = new GetExercises(exerciseRepository)
 const getMuscleGroups = new GetMuscleGroups(exerciseRepository)
 const createExercise = new CreateExercise(exerciseRepository)
+const generateRoutine = new GenerateRoutine(createGenerateRoutinePort())
 
 /**
  * Convierte el estado de una rutina en una etiqueta visual consistente.
@@ -80,7 +94,6 @@ function TrainerPage() {
   const [exerciseLoading, setExerciseLoading] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [reviewedRoutineIds, setReviewedRoutineIds] = useState<number[]>([])
-  const [generated, setGenerated] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -114,7 +127,7 @@ function TrainerPage() {
 
   const navigation = [
     { id: 'overview' as const, label: 'Resumen', icon: LayoutDashboard },
-    { id: 'exercises' as const, label: 'Banco de ejercicios', icon: Dumbbell },
+    { id: 'exercises' as const, label: 'Banco de ejercicios', icon: BicepsFlexed },
     { id: 'generate' as const, label: 'Generar rutina', icon: Sparkles },
     { id: 'routines' as const, label: 'Rutinas', icon: BookOpen },
     { id: 'reports' as const, label: 'Reportes', icon: BarChart3 },
@@ -136,7 +149,6 @@ function TrainerPage() {
   const selectSection = (nextSection: TrainerSection) => {
     setSection(nextSection)
     setMobileMenuOpen(false)
-    setGenerated(false)
   }
 
   const markRoutineAsReviewed = (routineId: number) => {
@@ -318,8 +330,8 @@ function TrainerPage() {
 
           <div className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
             <div className="mb-8">
-              {section != "exercises" && (
-              <WorkInProgressNotice />
+              {section != "exercises" && section != "generate"  ? (
+              <WorkInProgressNotice /> ) : ( <BackendIntegrationNotice/>
             )}
               <p className="mb-2 text-xs font-bold uppercase tracking-[1.6px] text-[#00a699]">
                 {section === 'review' ? 'Control de calidad' : 'Tu espacio de trabajo'}
@@ -368,9 +380,9 @@ function TrainerPage() {
 
                 {section === 'generate' && (
                   <GenerateSection
+                    programs={dashboard.programs}
                     exercises={dashboard.exercises}
-                    generated={generated}
-                    onGenerate={() => setGenerated(true)}
+                    muscleGroups={muscleGroups}
                   />
                 )}
 
@@ -537,6 +549,7 @@ function ExercisesSection({
   const [showForm, setShowForm] = useState(false)
   const [name, setName] = useState('')
   const [type, setType] = useState<Exercise['type']>('Fuerza')
+  const [intensity, setIntensity] = useState<IntensityLevel>('Bajo')
   const [description, setDescription] = useState('')
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([])
   const [isSaving, setIsSaving] = useState(false)
@@ -565,11 +578,13 @@ function ExercisesSection({
         name: trimmedName,
         description,
         type,
+        intensity,
         muscleGroupIds: selectedGroupIds,
       })
       setName('')
       setDescription('')
       setType('Fuerza')
+      setIntensity('Bajo')
       setSelectedGroupIds([])
       setShowForm(false)
     } catch {
@@ -654,6 +669,19 @@ function ExercisesSection({
             </div>
           </label>
 
+          <label className="text-xs font-semibold text-[#52716d]">
+            Intensidad del ejercicio
+
+            <div className="mt-2">
+              <CustomSelect
+                value={intensity}
+                options={INTENSITY_LEVELS.map((level) => ({ value: level, label: level }))}
+                placeholder="Selecciona una intensidad"
+                onChange={(value) => setIntensity(value as IntensityLevel)}
+              />
+            </div>
+          </label>
+
           <div className="text-xs font-semibold text-[#52716d] sm:col-span-2">
             <div className="mb-2 flex items-center justify-between gap-2">
               <span>Grupos musculares</span>
@@ -702,6 +730,7 @@ function ExercisesSection({
                 <th className="px-3 py-3 font-bold">Descripción</th>
                 <th className="px-3 py-3 font-bold">Grupos musculares</th>
                 <th className="px-3 py-3 font-bold">Tipo</th>
+                <th className="px-3 py-3 font-bold">Intensidad</th>
               </tr>
             </thead>
             <tbody>
@@ -724,6 +753,7 @@ function ExercisesSection({
                     </div>
                   </td>
                   <td className="px-3 py-4 text-[#718783]">{exercise.type}</td>
+                  <td className="px-3 py-4 text-[#718783]">{exercise.intensity}</td>
                 </tr>
               ))}
             </tbody>
@@ -793,26 +823,103 @@ function ExercisesSection({
   )
 }
 
-/** Presenta los criterios básicos para iniciar la generación de una rutina. */
+/** Presenta los parámetros de la generación de una rutina y muestra el resultado. */
 function GenerateSection({
+  programs,
   exercises,
-  generated,
-  onGenerate,
+  muscleGroups,
 }: {
+  programs: TrainingProgram[]
   exercises: Exercise[]
-  generated: boolean
-  onGenerate: () => void
+  muscleGroups: MuscleGroup[]
 }) {
-  const [program, setProgram] = useState('Acondicionamiento físico')
+  const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([])
+  const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([])
+  const [muscleGroupIds, setMuscleGroupIds] = useState<number[]>([])
+  const [routineName, setRoutineName] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
   const [exerciseCount, setExerciseCount] = useState('8')
-  const [intensity, setIntensity] = useState('Media')
-  const [selectedTypes, setSelectedTypes] = useState<string[]>(['Fuerza', 'Cardio'])
+  const [intensity, setIntensity] = useState<IntensityLevel>('Medio')
+  const [typeProportions, setTypeProportions] = useState<Record<ExerciseType, number>>({
+    Fuerza: 40,
+    Cardio: 30,
+    Flexibilidad: 30,
+  })
+  const [generatedRoutine, setGeneratedRoutine] = useState<GeneratedRoutine | null>(null)
+  const [generateError, setGenerateError] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
 
-  const toggleType = (type: string) => {
-    setSelectedTypes((current) =>
-      current.includes(type) ? current.filter((item) => item !== type) : [...current, type],
+  const filteredExercises = useMemo(() => {
+    const term = searchTerm.trim().toLocaleLowerCase()
+    if (!term) return exercises
+    return exercises.filter((exercise) =>
+      `${exercise.name} ${exercise.type} ${exercise.muscleGroups.map((group) => group.name).join(' ')}`
+        .toLocaleLowerCase()
+        .includes(term),
+    )
+  }, [exercises, searchTerm])
+
+  const toggleProgram = (programId: number) => {
+    const id = String(programId)
+    setSelectedProgramIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
     )
   }
+
+  const toggleExercise = (exerciseId: number) => {
+    const exercise = exercises.find((item) => item.id === exerciseId)
+    if (!exercise) return
+    setSelectedExercises((current) =>
+      current.some((item) => item.id === exerciseId)
+        ? current.filter((item) => item.id !== exerciseId)
+        : [...current, exercise],
+    )
+  }
+
+  const setExerciseIntensity = (exerciseId: number, level: IntensityLevel) => {
+    setSelectedExercises((current) =>
+      current.map((exercise) => (exercise.id === exerciseId ? { ...exercise, intensity: level } : exercise)),
+    )
+  }
+
+  const toggleMuscleGroup = (groupId: number) => {
+    setMuscleGroupIds((current) =>
+      current.includes(groupId) ? current.filter((id) => id !== groupId) : [...current, groupId],
+    )
+  }
+
+  const setProportion = (type: ExerciseType, value: string) => {
+    setTypeProportions((current) => ({ ...current, [type]: Math.max(0, Number(value) || 0) }))
+  }
+
+  const handleGenerate = async () => {
+    const requestPrograms = programs.filter((program) => selectedProgramIds.includes(String(program.id)))
+    if (requestPrograms.length === 0 || selectedExercises.length === 0) {
+      setGenerateError('Selecciona al menos un programa y un ejercicio.')
+      return
+    }
+
+    setGenerating(true)
+    setGenerateError(null)
+    try {
+      const routine = await generateRoutine.execute({
+        programs: requestPrograms,
+        exercises: selectedExercises,
+        exerciseCount: Number(exerciseCount) || 1,
+        muscleGroupIds,
+        typeProportions,
+        intensity,
+        name: routineName.trim(),
+      })
+      setGeneratedRoutine(routine)
+    } catch {
+      setGenerateError('No se pudo generar la rutina.')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const proportionTotal = Object.values(typeProportions).reduce((sum, value) => sum + value, 0)
 
   return (
     <div className="grid gap-5 xl:grid-cols-[1.3fr_0.8fr]">
@@ -824,75 +931,191 @@ function GenerateSection({
             <p className="mt-1 text-xs text-[#91a29f]">Configura los parámetros de la rutina</p>
           </div>
         </div>
+
         <div className="space-y-5">
+
           <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-[#52716d]">Programa de entrenamiento</span>
-            <select value={program} onChange={(event) => setProgram(event.target.value)} className="w-full rounded-xl border border-[#dce8e7] bg-white px-3 py-3 text-sm text-[#315652] outline-none focus:border-[#00a699]">
-              <option>Acondicionamiento físico</option>
-              <option>Bienestar integral</option>
-              <option>Preparación deportiva</option>
-            </select>
+            <span className="mb-2 block text-sm font-semibold text-[#52716d]">Nombre de la rutina</span>
+            <input
+              value={routineName}
+              onChange={(event) => setRoutineName(event.target.value)}
+              placeholder="Deja vacío para un nombre automático"
+              maxLength={60}
+              className="w-full rounded-xl border border-[#dce8e7] px-3 py-3 text-sm outline-none focus:border-[#00a699]"
+            />
           </label>
+
+          <div>
+            <span className="mb-3 block text-sm font-semibold text-[#52716d]">Programas de entrenamiento (mínimo 1)</span>
+            <div className="flex flex-wrap gap-2">
+              {programs.map((program) => {
+                const selected = selectedProgramIds.includes(String(program.id))
+                return (
+                  <button
+                    key={program.id}
+                    type="button"
+                    onClick={() => toggleProgram(program.id)}
+                    className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${selected ? 'border-[#8ccdc5] bg-[#eaf5f3] text-[#00645d]' : 'border-[#dce8e7] text-[#718783] hover:bg-[#f7faf9]'}`}
+                  >
+                    {selected && <Check size={14} className="mr-1 inline" />}
+                    {program.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="text-xs font-semibold text-[#52716d] sm:col-span-2">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span>Cobertura de grupos musculares</span>
+              <span className="font-normal text-[#91a29f]">Selecciona los objetivos</span>
+            </div>
+            {muscleGroups.length === 0 ? (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 font-normal text-amber-800">No hay grupos musculares disponibles.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 rounded-lg border border-[#dce8e7] bg-white p-3 sm:grid-cols-3">
+                {muscleGroups.map((group) => {
+                  const selected = muscleGroupIds.includes(group.id)
+                  return (
+                    <label key={group.id} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2 font-medium transition ${selected ? 'border-[#00a699] bg-[#eaf6f4] text-[#00645d]' : 'border-[#edf2f1] text-[#607976] hover:border-[#b2d8d8]'}`}>
+                      <input type="checkbox" checked={selected} onChange={() => toggleMuscleGroup(group.id)} className="size-4 accent-[#008d82]" />
+                      <span>{group.name}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="block">
               <span className="mb-2 block text-sm font-semibold text-[#52716d]">Cantidad de ejercicios</span>
-              <input type="number" min="1" max="30" value={exerciseCount} onChange={(event) => setExerciseCount(event.target.value)} className="w-full rounded-xl border border-[#dce8e7] px-3 py-3 text-sm outline-none focus:border-[#00a699]" />
+              <div className="w-full">
+                <AgeInput value={exerciseCount} onChange={setExerciseCount} />
+              </div>
             </label>
             <label className="block">
               <span className="mb-2 block text-sm font-semibold text-[#52716d]">Intensidad predominante</span>
-              <select value={intensity} onChange={(event) => setIntensity(event.target.value)} className="w-full rounded-xl border border-[#dce8e7] bg-white px-3 py-3 text-sm outline-none focus:border-[#00a699]">
-                <option>Baja</option><option>Media</option><option>Alta</option>
-              </select>
+              <div className="mt-2">
+                <CustomSelect
+                  value={intensity}
+                  options={INTENSITY_LEVELS.map((level) => ({ value: level, label: level }))}
+                  placeholder="Selecciona una intensidad"
+                  onChange={(value) => setIntensity(value as IntensityLevel)}
+                />
+              </div>
             </label>
           </div>
-          <div>
-            <span className="mb-3 block text-sm font-semibold text-[#52716d]">Tipos de ejercicios</span>
-            <div className="flex flex-wrap gap-2">
-              {['Fuerza', 'Cardio', 'Flexibilidad'].map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => toggleType(type)}
-                  className={`rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${selectedTypes.includes(type) ? 'border-[#8ccdc5] bg-[#eaf5f3] text-[#00645d]' : 'border-[#dce8e7] text-[#718783] hover:bg-[#f7faf9]'}`}
-                >
-                  {selectedTypes.includes(type) && <Check size={14} className="mr-1 inline" />}
-                  {type}
-                </button>
+
+          <div className="space-y-4">
+            <span className="block text-sm font-semibold text-[#52716d]">Proporción de ejercicios por tipo (%)</span>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {(['Fuerza', 'Cardio', 'Flexibilidad'] as const).map((type) => (
+                <label key={type} className="block">
+                  <span className="mb-2 block text-sm font-semibold text-[#52716d]">{type}</span>
+                  <AgeInput value={String(typeProportions[type])} onChange={(value) => setProportion(type, value)} />
+                </label>
               ))}
             </div>
+            <p className="text-xs text-[#91a29f]">Total configurado: {proportionTotal}%</p>
           </div>
+
           <button
-            onClick={onGenerate}
-            disabled={!exerciseCount || Number(exerciseCount) < 1 || selectedTypes.length === 0}
+            onClick={handleGenerate}
+            disabled={generating || selectedProgramIds.length === 0 || selectedExercises.length === 0}
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#004c4c] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#00645d] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
-            <Sparkles size={17} /> Preparar generación
+            <Sparkles size={17} /> {generating ? 'Generando…' : 'Generar rutina'}
           </button>
-          {generated && (
-            <div role="status" className="rounded-xl border border-[#cce8e2] bg-[#f0faf7] p-4 text-sm text-[#176b60]">
-              <p className="font-bold">Criterios preparados</p>
-              <p className="mt-1 leading-5">Programa: {program}. Se configuraron {exerciseCount} ejercicios, intensidad {intensity.toLowerCase()} y tipos: {selectedTypes.join(', ')}.</p>
-              <p className="mt-2 text-xs text-[#658c85]">La generación real se conectará cuando esté disponible el servicio del backend.</p>
-            </div>
-          )}
+          {generateError && <p role="alert" className="text-sm text-rose-700">{generateError}</p>}
+          {generatedRoutine && <GeneratedRoutinePanel routine={generatedRoutine} />}
         </div>
       </section>
 
       <aside className="rounded-2xl border border-[#e3ecea] bg-white p-6">
-        <div className="flex items-center gap-2 text-[#008d82]"><Filter size={17} /><h3 className="font-bold text-[#214c48]">Banco disponible</h3></div>
-        <p className="mt-2 text-sm leading-6 text-[#829693]">La rutina se confeccionará a partir de los ejercicios registrados y de los criterios que definas.</p>
-        <div className="mt-5 space-y-3">
-          {['Fuerza', 'Cardio', 'Flexibilidad'].map((type) => {
-            const count = exercises.filter((exercise) => exercise.type === type).length
+        <div className="mb-5 flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-xl bg-[#eaf5f3] text-[#008d82]"><BicepsFlexed size={21} /></span>
+          <div>
+            <h3 className="font-bold text-[#214c48]">Banco disponible</h3>
+            <p className="mt-1 text-xs text-[#91a29f]">Selecciona ejercicios para confeccionar la rutina.</p>
+          </div>
+        </div>
+        <label className="relative block">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#91a29f]" />
+          <input
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Buscar por nombre, grupo muscular o tipo"
+            aria-label="Buscar ejercicios de la rutina"
+            className="w-full rounded-xl border border-[#dce8e7] bg-[#fbfdfc] py-2.5 pl-9 pr-3 text-sm outline-none transition placeholder:text-[#a3b2af] focus:border-[#00a699] focus:ring-2 focus:ring-[#00a699]/10"
+          />
+        </label>
+        <div className={`mt-4 space-y-3 rounded-xl border border-[#dce8e7] bg-white p-3 ${filteredExercises.length > 5 ? 'max-h-[400px] overflow-y-auto' : ''}`}>
+          {filteredExercises.map((exercise) => {
+            const selected = selectedExercises.some((item) => item.id === exercise.id)
+            const selectedIntensity = selectedExercises.find((item) => item.id === exercise.id)?.intensity ?? exercise.intensity
             return (
-              <div key={type} className="flex items-center justify-between rounded-xl bg-[#f6faf9] px-4 py-3">
-                <span className="text-sm font-semibold text-[#52716d]">{type}</span>
-                <span className="text-sm font-bold text-[#007d73]">{count}</span>
-              </div>
+              <label
+                key={exercise.id}
+                className={`flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2 font-medium transition ${selected ? 'border-[#00a699] bg-[#eaf6f4] text-[#00645d]' : 'border-[#edf2f1] text-[#607976] hover:border-[#b2d8d8]'}`}
+              >
+                <input type="checkbox" checked={selected} onChange={() => toggleExercise(exercise.id)} className="size-4 accent-[#008d82]" />
+                <span className="flex-1">{exercise.name}</span>
+                <span className="text-xs text-[#718783]">{exercise.type}</span>
+                <div className="w-[180px]">
+                  <CustomSelect
+                    value={selectedIntensity}
+                    options={INTENSITY_LEVELS.map((level) => ({ value: level, label: level }))}
+                    placeholder="Intensidad"
+                    onChange={(value) => setExerciseIntensity(exercise.id, value as IntensityLevel)}
+                  />
+                </div>
+              </label>
             )
           })}
+          {filteredExercises.length === 0 && searchTerm.trim() && (
+            <p className="text-sm text-amber-800">No hay ejercicios que coincidan con la búsqueda.</p>
+          )}
+          {filteredExercises.length === 0 && !searchTerm.trim() && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 font-normal text-amber-800">
+              El banco está vacío. Regístralos primero en el apartado de ejercicios.
+            </p>
+          )}
         </div>
       </aside>
+    </div>
+  )
+}
+
+/** Muestra la rutina generada dividida por los bloques estructurales. */
+function GeneratedRoutinePanel({ routine }: { routine: GeneratedRoutine }) {
+  return (
+    <div role="status" className="rounded-xl border border-[#cce8e2] bg-[#f0faf7] p-4">
+      <p className="font-bold text-[#176b60]">{routine.name}</p>
+      <p className="mt-1 text-xs text-[#658c85]">Programa: {routine.program || 'personalizada'}</p>
+      <div className="mt-3 space-y-3">
+        {routine.blocks.map((block, index) => (
+          <div key={`${block.kind}-${index}`} className="rounded-lg border border-[#dce8e7] bg-white px-3.5 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold text-[#315652]">{block.title}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#91a29f]">{block.kind}</span>
+            </div>
+            {block.exercises.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {block.exercises.map((entry) => {
+                  const exercise = routine.exercises.find((item) => item.id === entry.id)
+                  return (
+                    <li key={entry.id} className="text-xs text-[#52716d]">
+                      <span>{exercise?.name ?? `Ejercicio ${entry.id}`}</span>
+                      {entry.repetitions != null && <span className="float-right text-[#91a29f]">{entry.repetitions} rep.</span>}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
