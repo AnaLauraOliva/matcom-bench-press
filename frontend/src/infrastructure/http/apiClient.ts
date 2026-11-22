@@ -9,10 +9,13 @@ const apiClient = axios.create({
 })
 
 // Añadimos automáticamente el token a las peticiones autenticadas.
+// El registro no debe enviar token: es una petición anónima y un token
+// caducado provocaría un error de autenticación en el backend.
 apiClient.interceptors.request.use((config) => {
+  const isRegister = config.url?.endsWith('/auth/register')
   const storedSession = localStorage.getItem(AUTH_SESSION_KEY)
 
-  if (storedSession) {
+  if (storedSession && !isRegister) {
     try {
       const session = JSON.parse(storedSession) as { token: string }
 
