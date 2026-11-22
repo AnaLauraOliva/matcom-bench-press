@@ -1,0 +1,26 @@
+public class PersonalContratacionFallidaConsumer
+{
+    private readonly IPersonalRepository _repository;
+
+    public PersonalContratacionFallidaConsumer(
+        IPersonalRepository repository)
+    {
+        _repository = repository;
+    }
+
+    public async Task Consumir(ContratacionFallida evento)
+    {
+        // Transacción compensatoria local: se anulan al empleado
+        // y su asignación en una única transacción, con la misma
+        // serialización que el registro original. Como en los
+        // demás participantes, se conserva el historial para que
+        // la compensación sea auditable.
+        await _repository.EjecutarTransaccion(async () =>
+        {
+            if (await _repository.EmpleadoExiste(evento.EmpleadoId))
+            {
+                await _repository.AnularEmpleado(evento.EmpleadoId);
+            }
+        });
+    }
+}
