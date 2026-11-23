@@ -7,10 +7,10 @@ import { LoginInteractor } from "../application/use-cases/login/login-interactor
 import { RegisterUserInteractor } from "../application/use-cases/register-user/register-user-interactor.js";
 import { RegistrationPolicy } from "../domain/policies/registration-policy.js";
 import { UserAccessPolicy } from "../domain/policies/user-access-policy.js";
-import { createPrismaClient } from "../infrastructure/database/prisma-client.js";
-import { PrismaLocationDataSource } from "../infrastructure/database/prisma-location-data-source.js";
-import { PrismaUserDataSource } from "../infrastructure/database/prisma-user-data-source.js";
-import { PrismaUserProfileDataSource } from "../infrastructure/database/prisma-user-profile-data-source.js";
+import { createPrismaClient } from "../infrastructure/database/prisma/prisma-client.js";
+import { PrismaLocationDataSource } from "../infrastructure/database/prisma/prisma-location-data-source.js";
+import { PrismaUserDataSource } from "../infrastructure/database/prisma/prisma-user-data-source.js";
+import { PrismaUserProfileDataSource } from "../infrastructure/database/prisma/prisma-user-profile-data-source.js";
 import { DeactivateUserController } from "../interfaces/controllers/deactivate-user-controller.js";
 import { DeleteUserController } from "../interfaces/controllers/delete-user-controller.js";
 import { GetUserController } from "../interfaces/controllers/get-user-controller.js";
