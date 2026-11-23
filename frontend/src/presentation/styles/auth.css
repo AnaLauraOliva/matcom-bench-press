@@ -342,8 +342,8 @@ from {
 }
 
 
-/* Campo de edad con botones personalizados */
-.age-control {
+/* Campo numérico con botones personalizados */
+.number-control {
 display: flex;
   align-items: stretch;
   width: 100%;
@@ -358,13 +358,13 @@ display: flex;
 }
 
 
-.age-control:focus-within {
+.number-control:focus-within {
 border-color: var(--accent);
   box-shadow: 0 0 0 3px rgb(0 166 153 / 13%);
 }
 
 
-.auth-form .age-input {
+.number-input {
 flex: 1;
   width: 0;
   min-width: 0;
@@ -380,24 +380,24 @@ flex: 1;
 }
 
 
-.auth-form .age-input:focus {
+.number-input:focus {
 border: 0;
   box-shadow: none;
 }
 
 
 /* Ocultar las flechas nativas del input numérico */
-.auth-form .age-input::-webkit-inner-spin-button,
-.auth-form .age-input::-webkit-outer-spin-button {
+.number-input::-webkit-inner-spin-button,
+.number-input::-webkit-outer-spin-button {
 margin: 0;
   -webkit-appearance: none;
 }
 
 
-.age-buttons {
+.number-buttons {
 display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
   gap: 2px;
   padding: 4px;
   background: #e8f5f3;
@@ -405,7 +405,7 @@ display: flex;
 }
 
 
-.age-buttons button {
+.number-buttons button {
 display: grid;
   flex: 1;
   min-width: 34px;
@@ -423,19 +423,19 @@ display: grid;
 }
 
 
-.age-buttons button:hover:not(:disabled) {
+.number-buttons button:hover:not(:disabled) {
 color: #ffffff;
   background: var(--accent);
 }
 
 
-.age-buttons button:focus-visible {
+.number-buttons button:focus-visible {
 outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
 
-.age-buttons button:disabled {
+.number-buttons button:disabled {
 color: #a9bfbc;
   background: #f4f8f7;
   cursor: not-allowed;
@@ -446,7 +446,7 @@ color: #a9bfbc;
 .custom-select-chevron,
   .custom-select-trigger,
   .custom-select-option,
-  .age-buttons button {
+  .number-buttons button {
 transition: none;
 }
 .custom-select-menu {

@@ -51,7 +51,7 @@ function LandingPage({ onOpenAuth }: LandingPageProps) {
           <span className="brand-icon">
             <Dumbbell size={23} strokeWidth={2.5} />
           </span>
-          <span>Matcom Bench Press</span>
+          <span>MatCom Bench Press</span>
         </a>
 
         <button

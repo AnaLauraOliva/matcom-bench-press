@@ -1,7 +1,7 @@
 import { ArrowRight, Dumbbell, X } from 'lucide-react'
 import type { FormEvent } from 'react'
 import CustomSelect from '../common/CustomSelect'
-import AgeInput from '../common/AgeInput'
+import NumberField from '../common/NumberField'
 import type { Location } from '../../../domain/entities/Location'
 import type { AuthForm, AuthMode } from '../../types/auth'
 
@@ -163,7 +163,8 @@ function AuthModal({
 
                   <label>
                     Edad
-                    <AgeInput
+                    <NumberField
+                      name="age"
                       value={form.age}
                       onChange={(value) => onFormChange('age', value)}
                     />

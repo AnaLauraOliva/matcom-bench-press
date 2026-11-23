@@ -1,28 +1,33 @@
 
-type AgeInputProps = {
+type NumberFieldProps = {
   value: string
   onChange: (value: string) => void
+  /** Atributo `name` del input nativo; diferente al contexto de edad. */
+  name?: string
 }
 
-function AgeInput({ value, onChange }: AgeInputProps) {
-  const age = Number(value)
+/**
+ * Campo numérico con botones de incremento y decremento.
+ */
+function NumberField({ value, onChange, name = 'number' }: NumberFieldProps) {
+  const parsed = Number(value)
 
-  // Incrementa la edad sin superar el máximo permitido.
-  function increaseAge() {
-    onChange(String(Math.min(120, (age || 0) + 1)))
+  // Incrementa el valor sin superar el máximo permitido.
+  function increaseValue() {
+    onChange(String(Math.min(120, (parsed || 0) + 1)))
   }
 
-  // Disminuye la edad sin bajar de 1.
-  function decreaseAge() {
-    onChange(String(Math.max(1, (age || 2) - 1)))
+  // Disminuye el valor sin bajar de 1.
+  function decreaseValue() {
+    onChange(String(Math.max(1, (parsed || 2) - 1)))
   }
 
   return (
-    <div className="age-control">
+    <div className="number-control">
       <input
-        className="age-input"
+        className="number-input"
         type="number"
-        name="age"
+        name={name}
         min={1}
         max={120}
         step={1}
@@ -31,13 +36,13 @@ function AgeInput({ value, onChange }: AgeInputProps) {
         required
       />
 
-      <div className="age-buttons">
+      <div className="number-buttons">
         <button
           type="button"
-          aria-label="Aumentar edad"
-          title="Aumentar edad"
-          disabled={age >= 120}
-          onClick={increaseAge}
+          aria-label="Incrementar valor"
+          title="Incrementar valor"
+          disabled={parsed >= 120}
+          onClick={increaseValue}
         >
           <svg
             viewBox="0 0 24 24"
@@ -58,10 +63,10 @@ function AgeInput({ value, onChange }: AgeInputProps) {
 
         <button
           type="button"
-          aria-label="Disminuir edad"
-          title="Disminuir edad"
-          disabled={value !== '' && age <= 1}
-          onClick={decreaseAge}
+          aria-label="Decrementar valor"
+          title="Decrementar valor"
+          disabled={value !== '' && parsed <= 1}
+          onClick={decreaseValue}
         >
           <svg
             viewBox="0 0 24 24"
@@ -84,4 +89,4 @@ function AgeInput({ value, onChange }: AgeInputProps) {
   )
 }
 
-export default AgeInput
+export default NumberField
