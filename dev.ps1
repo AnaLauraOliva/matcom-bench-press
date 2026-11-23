@@ -146,6 +146,7 @@ function Invoke-Reset {
     Invoke-Start
     Invoke-Npm -Directory 'backend' -Arguments @('run', 'prisma:migrate')
     Invoke-Npm -Directory 'backend' -Arguments @('run', 'prisma:seed')
+    Invoke-Npm -Directory 'backend' -Arguments @('run', 'mongo:seed')
     Write-Host 'Base de datos reiniciada y cargada con datos de ejemplo.'
 }
 
@@ -164,7 +165,8 @@ Uso: .\dev.ps1 <comando>
   start       Levanta PostgreSQL, backend y frontend
   stop        Apaga backend, frontend y PostgreSQL
   db-migrate  Aplica migraciones de Prisma
-  db-seed     Carga datos de ejemplo
+  db-seed      Carga datos de ejemplo
+  mongo-seed  Carga estructuras de rutina en MongoDB
   db-studio   Abre Prisma Studio
   check       Typecheck, lint y build de ambos proyectos
   reset       Borra la BD y la reconstruye (DESTRUCTIVO)
@@ -179,6 +181,7 @@ try {
         'stop' { Invoke-Stop }
         'db-migrate' { Invoke-Npm -Directory 'backend' -Arguments @('run', 'prisma:migrate') }
         'db-seed' { Invoke-Npm -Directory 'backend' -Arguments @('run', 'prisma:seed') }
+        'mongo-seed' { Invoke-Npm -Directory 'backend' -Arguments @('run', 'mongo:seed') }
         'db-studio' { Invoke-Npm -Directory 'backend' -Arguments @('run', 'prisma:studio') }
         'check' { Invoke-Check }
         'reset' { Invoke-Reset }

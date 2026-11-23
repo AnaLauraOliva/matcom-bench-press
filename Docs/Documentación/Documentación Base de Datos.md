@@ -118,8 +118,65 @@ Desde la raíz del proyecto:
 | `prisma migrate dev` | Aplica migraciones nuevas al esquema. |
 | `prisma db seed` | Vuelve a cargar los datos de ejemplo (solo inserta si la tabla está vacía). |
 
+## Base de datos documental: MongoDB
+
+Además de PostgreSQL, el proyecto utiliza **MongoDB 8.0** para almacenar las estructuras variables de las rutinas. La estructura de una rutina puede cambiar según el entrenador y el objetivo del cliente (bloques simples, circuitos anidados, distintas repeticiones y descansos), por lo que no encaja en un esquema relacional rígido.
+
+### Colección `rutina_estructura`
+
+Cada documento representa la estructura de bloques de una rutina:
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `_id` | `number` | Identificador numérico de la rutina (clave primaria). |
+| `version` | `number` | Versión de la estructura. |
+| `bloques` | `array` | Lista de bloques de la rutina. |
+
+Cada bloque contiene:
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `tipo` | `string` | `'calentamiento'`, `'circuito'`, `'serie'` o `'descanso'`. |
+| `orden` | `number` | Orden de aparición dentro de la rutina. |
+| `duracion` | `number` \| `null` | Duración en minutos (para calentamiento y descanso). |
+| `repeticiones` | `number` \| `null` | Número de repeticiones del bloque. |
+| `descanso` | `number` \| `null` | Tiempo de descanso en minutos. |
+| `ejercicios` | `array` | Lista de ejercicios incluidos en el bloque. |
+| `bloques` | `array` \| `undefined` | Bloques anidados (ej. varios circuitos dentro de un circuito). |
+
+Cada ejercicio dentro de un bloque:
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id_ejercicio` | `number` | Identificador del ejercicio en PostgreSQL. |
+| `orden` | `number` | Orden dentro del bloque. |
+| `series` | `number` \| `null` | Número de series. |
+| `repeticiones` | `number` \| `null` | Repeticiones por serie. |
+| `tiempo` | `number` \| `null` | Tiempo en segundos. |
+| `nivel_intensidad` | `string` | `'bajo'`, `'medio'` o `'alto'`. |
+
+### Conexión y seed
+
+La conexión se establece con Mongoose usando la variable `MONGODB_URI` (definida en `backend/.env.example`). El archivo `backend/src/infrastructure/database/mongo/connect-mongo.ts` crea la conexión y `backend/src/infrastructure/database/mongo/routine-structure-schema.ts` define el esquema de Mongoose en la colección `rutina_estructura`.
+
+Para cargar los datos de ejemplo:
+
+```bash
+cd backend
+npm run mongo:seed
+```
+
+Este script lee `backend/scripts/seed-data/routine-structures.ts` e inserta (sin sobrescribir si ya existen) tres estructuras de rutina: fuerza cuerpo completo, resistencia básica y movilidad general.
+
+### Volumen de Docker
+
+El servicio `mongo` en `docker-compose.yml` monta el volumen `mongo-data` en `/data/db`. Al igual que con PostgreSQL:
+
+- `docker compose down` conserva los datos de MongoDB.
+- `docker compose down -v` los elimina.
+
 ## Relación con el resto del proyecto
 
-- El **backend** (`docs/Documentación/Documentación Backend.md`) usa Prisma para consultar y modificar esta base de datos.
-- El **frontend** (`docs/Documentación/Documentación Frontend.md`) consume la API del backend, no accede directamente a PostgreSQL.
+- El **backend** (`docs/Documentación/Documentación Backend.md`) usa Prisma para PostgreSQL y Mongoose para MongoDB.
+- El **frontend** (`docs/Documentación/Documentación Frontend.md`) consume la API del backend, no accede directamente a ninguna base de datos.
 - Para levantar todo el proyecto de una sola vez, usa los comandos descritos en el `README.md` de la raíz (`make start` en Linux o `.\dev.ps1 start` en Windows).

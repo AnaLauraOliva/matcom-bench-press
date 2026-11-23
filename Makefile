@@ -16,6 +16,7 @@ help:
 	@echo "  stop           Apaga backend, frontend y PostgreSQL"
 	@echo "  db-migrate     Aplica migraciones de Prisma"
 	@echo "  db-seed        Carga datos de ejemplo"
+	@echo "  mongo-seed     Carga estructuras de rutina en MongoDB"
 	@echo "  db-studio      Abre Prisma Studio"
 	@echo "  check          Typecheck, lint y build de ambos proyectos"
 	@echo "  reset          Borra la BD y la reconstruye (DESTRUCTIVO)"
@@ -78,6 +79,9 @@ db-migrate:
 db-seed:
 	cd backend && npm run prisma:seed
 
+mongo-seed:
+	cd backend && npm run mongo:seed
+
 db-studio:
 	cd backend && npm run prisma:studio
 
@@ -91,5 +95,5 @@ reset:
 	@$(MAKE) stop
 	@docker compose down -v
 	@$(MAKE) start
-	@$(MAKE) db-migrate db-seed
+	@$(MAKE) db-migrate db-seed mongo-seed
 	@echo "Base de datos reiniciada y cargada con datos de ejemplo."

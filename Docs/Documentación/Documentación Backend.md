@@ -86,7 +86,38 @@ Desde la carpeta `backend`:
 | `npm run prisma:migrate` | Aplica migraciones pendientes a la base de datos. |
 | `npm run prisma:seed` | Carga los datos de ejemplo definidos en `prisma/seed.ts`. |
 | `npm run prisma:studio` | Abre Prisma Studio para explorar la base de datos. |
+| `npm run mongo:seed` | Carga las estructuras de rutina en MongoDB desde `backend/scripts/seed-data/routine-structures.ts`. |
+
+## Documentación de la API (Swagger / OpenAPI)
+
+Con el backend en ejecución, la especificación interactiva está en:
+
+- Swagger UI: `http://localhost:3000/api-docs`
+- OpenAPI 3.1 en JSON: `http://localhost:3000/openapi.json`
+
+La especificación describe las rutas que se montan en Express, parámetros, autenticación, cuerpos JSON, respuestas de éxito, errores y ejemplos. Los cuerpos de entrada se convierten desde los esquemas Zod que también validan las solicitudes.
+
+### Cómo mantenerla al día
+
+`src/interfaces/http/api-routes.ts` es la lista única de rutas de la aplicación actual. `create-express-app.ts` usa esa lista para registrar los handlers y `openapi.ts` para construir OpenAPI al iniciar el proceso. Una ruta añadida a la aplicación se declara en ese registro con su controlador, método, path, descripción y respuestas.
+
+Al crear o modificar un endpoint:
+
+1. Actualiza el esquema Zod de entrada en `src/interfaces/validators/` y así el formato del cuerpo se refleja automáticamente en OpenAPI.
+2. Añade o modifica la entrada correspondiente en `API_ROUTES` con el controlador y la información de éxito y errores.
+3. Actualiza los esquemas y ejemplos de respuesta en `openapi.ts` si cambia el JSON que presenta el controlador.
+4. Reinicia el servidor y revisa `/api-docs` y `/openapi.json`.
+
+Los cambios en las rutas montadas y los validadores de entrada se reflejan automáticamente. Las descripciones de reglas de negocio, respuestas y errores son metadatos intencionales: deben cambiarse junto con el comportamiento de los controladores y casos de uso.
+
+### Convenciones HTTP
+
+- Los cuerpos de solicitud y las respuestas con contenido usan `application/json`.
+- Los errores usan la forma `{ "error": { "code": "...", "message": "...", "details": [...] } }`. `details` aparece en `INVALID_DATA` y contiene `field` y `message` por cada problema de validación.
+- Las rutas protegidas requieren `Authorization: Bearer <token>`. El token se obtiene al iniciar sesión. El registro permite omitirlo para auto-registrar clientes; si se envía, el token debe ser válido.
+- `DELETE /api/users/:id` realiza un borrado lógico: anonimiza los datos y conserva la fila para mantener relaciones. `PATCH /api/users/:id/deactivate` solo desactiva la cuenta.
+- Si el JSON no se puede interpretar, el backend devuelve `400 MALFORMED_JSON`. Para rutas inexistentes devuelve `404 ROUTE_NOT_FOUND`. Los fallos inesperados devuelven `500 INTERNAL_ERROR` sin exponer detalles internos.
 
 ## Relación con el resto del proyecto
 
-El backend expone la API que consume el frontend (ver `docs/Documentación/Documentación Frontend.md`) y utiliza PostgreSQL como base de datos relacional (ver `docs/Documentación/Documentación Base de Datos.md`). Para levantar todo el proyecto de una sola vez, usa los comandos descritos en el `README.md` de la raíz (`make start` en Linux o `.\dev.ps1 start` en Windows).
+El backend expone la API que consume el frontend (ver `docs/Documentación/Documentación Frontend.md`), utiliza PostgreSQL como base de datos relacional (ver `docs/Documentación/Documentación Base de Datos.md`) y MongoDB para las estructuras variables de las rutinas (ver la sección de MongoDB en dicha documentación). Para levantar todo el proyecto de una sola vez, usa los comandos descritos en el `README.md` de la raíz (`make start` en Linux o `.\dev.ps1 start` en Windows).

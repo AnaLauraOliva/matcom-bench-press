@@ -15,13 +15,12 @@ Aplicación web para gestionar la generación automática de planes de entrenami
 | Frontend | Tailwind CSS 4 | Estilos |
 | Backend | Node.js 24.21.0, Express 5 y TypeScript | API REST, validación de entradas y reglas de negocio. |
 | ORM | Prisma 7 | Operaciones CRUD, migraciones y datos de ejemplo sobre PostgreSQL. |
-| Base de datos relacional | PostgreSQL 17 | Persistencia de la información del negocio. |
-| Base de datos documental | MongoDB | Prevista para las estructuras variables de las rutinas; hoy **no** forma parte del entorno local (ver nota más abajo). |
-| Entorno local | Docker Compose | Levanta y detiene el contenedor de PostgreSQL. |
-| Diseño | Clean Architecture y patrones Adapter, Template Method y Data Mapper | Separación de responsabilidades; detalles en `backend/README.md`. |
+| Base de datos relacional | PostgreSQL 17 | Persistencia de la información del negocio (usuarios, roles, ejercicios, rutinas, programas, asignaciones, sesiones). |
+| Base de datos documental | MongoDB 8.0 | Estructuras variables de las rutinas (bloques, ejercicios, circuitos anidados, repeticiones y descansos). |
+| Documentación de API | Swagger UI / OpenAPI 3.1 | Especificación interactiva de los endpoints en `/api-docs` y `/openapi.json`. |
+| Entorno local | Docker Compose | Levanta y detiene los contenedores de PostgreSQL y MongoDB. |
+| Diseño | Clean Architecture y patrones Adapter, Template Method y Data Mapper | Separación de responsabilidades; detalles en `docs/Documentación/Documentación Backend.md`. |
 | Planificación | Trello | Seguimiento de las tareas del equipo. |
-
-> **Nota sobre MongoDB:** está previsto en el diseño para las estructuras variables de las rutinas, pero `docker-compose.yml` solo define PostgreSQL y el esquema de Prisma apunta a PostgreSQL. Los comandos de este documento levantan únicamente PostgreSQL.
 
 ## Requisitos previos
 
@@ -36,7 +35,7 @@ Antes de usar los comandos, crea los archivos `.env` a partir de los ejemplos y 
 | Archivo | Crearlo con | Configura |
 | --- | --- | --- |
 | `.env` (raíz) | `cp .env.example .env` | Usuario, contraseña, base de datos y puerto de PostgreSQL para Docker Compose. |
-| `backend/.env` | `cp backend/.env.example backend/.env` | `DATABASE_URL`, puerto del API, origen del CORS, JWT y bcrypt. |
+| `backend/.env` | `cp backend/.env.example backend/.env` | `DATABASE_URL`, puerto del API, origen del CORS, JWT, bcrypt y `MONGODB_URI` para MongoDB. |
 | `frontend/.env` | `cp frontend/.env.example frontend/.env` | URL de la API y si se usan repositorios mock. |
 
 En Windows, sustituye `cp` por `Copy-Item`, por ejemplo: `Copy-Item .env.example .env`.
@@ -57,9 +56,10 @@ Ejecuta siempre desde la raíz del repositorio. `start` deja backend y frontend 
 | `make stop` | Apaga backend, frontend y PostgreSQL. | Cerrar las dos terminales de desarrollo y ejecutar `docker compose down`. |
 | `make db-migrate` | Aplica las migraciones pendientes de Prisma. | `cd backend && npm run prisma:migrate` (`prisma migrate dev`). Con el historial actual aplica las migraciones existentes sin preguntar; solo pedirá nombre si hay cambios nuevos en `schema.prisma`. |
 | `make db-seed` | Carga en todas las tablas los datos de ejemplo definidos en `backend/prisma/seed.ts`. | `cd backend && npm run prisma:seed`. |
+| `make mongo-seed` | Carga las estructuras de rutina en MongoDB desde `backend/scripts/seed-data/routine-structures.ts`. | `cd backend && npm run mongo:seed`. |
 | `make db-studio` | Abre Prisma Studio para explorar la base de datos. | `cd backend && npm run prisma:studio`. |
 | `make check` | Verifica tipos, lint y compilación de ambos proyectos. | `npm run typecheck` y `npm run build` en backend, y `npm run lint` y `npm run build` en frontend. |
-| `make reset` | **Destructivo.** Borra la BD completa (estructura y datos), la reconstruye desde las migraciones y vuelve a cargar el seed. Ver [¿Qué pasa con la base de datos?](#qué-pasa-con-la-base-de-datos). | `make stop`, `docker compose down -v`, `make start`, `make db-migrate` y `make db-seed`. |
+| `make reset` | **Destructivo.** Borra la BD completa (estructura y datos de PostgreSQL y MongoDB), las reconstruye desde las migraciones y vuelve a cargar los seeds. Ver [¿Qué pasa con la base de datos?](#qué-pasa-con-la-base-de-datos). | `make stop`, `docker compose down -v`, `make start`, `make db-migrate`, `make db-seed` y `make mongo-seed`. |
 
 ### Windows (`dev.ps1`)
 
@@ -79,30 +79,32 @@ Los mismos comandos se escriben como argumentos de un único script:
 | `.\dev.ps1 stop` | `make stop` | Cerrar las terminales y `docker compose down`. |
 | `.\dev.ps1 db-migrate` | `make db-migrate` | `cd backend; npm run prisma:migrate`. |
 | `.\dev.ps1 db-seed` | `make db-seed` | `cd backend; npm run prisma:seed`. |
+| `.\dev.ps1 mongo-seed` | `make mongo-seed` | `cd backend; npm run mongo:seed`. |
 | `.\dev.ps1 db-studio` | `make db-studio` | `cd backend; npm run prisma:studio`. |
 | `.\dev.ps1 check` | `make check` | Typecheck y build de backend, y lint y build de frontend. |
-| `.\dev.ps1 reset` | `make reset` | Apagar, `docker compose down -v`, levantar, migrar y sembrar (borra la estructura y los datos; ver la sección siguiente). |
+| `.\dev.ps1 reset` | `make reset` | Apagar, `docker compose down -v`, levantar, migrar y sembrar PostgreSQL y MongoDB (borra la estructura y los datos; ver la sección siguiente). |
 
 Si PowerShell bloquea el script, permite su ejecución con `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
 ### ¿Qué pasa con la base de datos?
 
-El volumen `postgres_data` de Docker se monta en `/var/lib/postgresql/data`, es decir, contiene **todo** el cluster de PostgreSQL: tablas, índices, roles y también las filas. Por eso conviene distinguir estos dos comandos:
+Docker Compose levanta dos servicios de base de datos: **PostgreSQL** (volumen `postgres_data`) y **MongoDB** (volumen `mongo-data`). Cada volumen contiene todo su cluster respectivo. Por eso conviene distinguir estos dos comandos:
 
-| Comando | Volumen | Estructura en la BD | Datos |
+| Comando | Volúmenes | Estructura en las BD | Datos |
 | --- | --- | --- | --- |
-| `stop` (`docker compose down`) | Se conserva | Intacta | Intactos |
-| `reset` (`docker compose down -v`) | Se elimina | Se borra y se recrea | Se borran y se recargan |
+| `stop` (`docker compose down`) | Se conservan | Intactas | Intactos |
+| `reset` (`docker compose down -v`) | Se eliminan | Se borran y se recrean | Se borran y se recargan |
 
-`reset` reconstruye la base de datos a partir de lo que está versionado en el repositorio:
+`reset` reconstruye las bases de datos a partir de lo que está versionado en el repositorio:
 
-1. Elimina el volumen y levanta un PostgreSQL vacío con el usuario y la base de datos configurados en `.env`.
-2. `db-migrate` vuelve a crear todas las tablas aplicando los archivos de `backend/prisma/migrations/`. `backend/prisma/schema.prisma` es la fuente de verdad de ese diseño.
-3. `db-seed` rellena **todas** las tablas con los datos de ejemplo de `backend/prisma/seed.ts`: sedes, usuarios (administradores, entrenadores y clientes), jefe de sala, tipos de ejercicio, grupos musculares, ejercicios, programas, rutinas, validaciones, asignaciones, sesiones y solicitudes de ajuste.
+1. Elimina los volúmenes y levanta PostgreSQL y MongoDB vacíos con los usuarios y bases de datos configurados en `.env`.
+2. `db-migrate` vuelve a crear todas las tablas de PostgreSQL aplicando los archivos de `backend/prisma/migrations/`. `backend/prisma/schema.prisma` es la fuente de verdad de ese diseño relacional.
+3. `db-seed` rellena **todas** las tablas de PostgreSQL con los datos de ejemplo de `backend/prisma/seed.ts`: sedes, usuarios (administradores, entrenadores y clientes), jefe de sala, tipos de ejercicio, grupos musculares, ejercicios, programas, rutinas, validaciones, asignaciones, sesiones y solicitudes de ajuste.
+4. `mongo-seed` carga las estructuras de rutina en MongoDB desde `backend/scripts/seed-data/routine-structures.ts`.
 
-Al terminar, al abrir la BD verás tablas y datos de demostración. En cambio, **se pierde todo lo que no esté en las migraciones ni en el seed**: usuarios o rutinas creados al probar, sesiones registradas y cualquier cambio manual hecho con SQL. Usa `reset` solo cuando quieras partir de cero; en el día a día usa `stop`.
+Al terminar, al abrir las BD verás tablas y documentos de demostración. En cambio, **se pierde todo lo que no esté en las migraciones ni en los seeds**: usuarios o rutinas creados al probar, sesiones registradas, estructuras de rutina creadas manualmente en MongoDB y cualquier cambio hecho directamente en las bases de datos. Usa `reset` solo cuando quieras partir de cero; en el día a día usa `stop`.
 
-Si `db-seed` falla a mitad de proceso, puede quedar una BD con tablas vacías o parcialmente llenas, porque el seed inserta tabla por tabla. Revisa la salida del comando antes de darlo por bueno.
+Si `db-seed` o `mongo-seed` fallan a mitad de proceso, puede quedar una BD con tablas o colecciones vacías o parcialmente llenas, porque los seeds insertan registro por registro. Revisa la salida del comando antes de darlo por bueno.
 
 ### Flujo habitual
 
@@ -128,7 +130,10 @@ Servicios tras `start`:
 | --- | --- |
 | Frontend | http://localhost:5173 |
 | API backend | http://localhost:3000 |
+| Documentación API (Swagger UI) | http://localhost:3000/api-docs |
+| OpenAPI JSON | http://localhost:3000/openapi.json |
 | PostgreSQL | `localhost:5432` (o el puerto configurado en `.env`) |
+| MongoDB | `localhost:27017` (o el puerto configurado en `MONGO_PORT`) |
 
 ## Documentación detallada
 
