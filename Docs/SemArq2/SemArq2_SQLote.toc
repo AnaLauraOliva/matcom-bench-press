@@ -1,0 +1,44 @@
+\babel@toc {spanish}{}\relax 
+\contentsline {section}{\numberline {1}Análisis Comparativo de Comunicación y Acoplamiento}{3}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Pregunta}{3}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Fundamentos: estilo arquitectónico, connascence y comunicación}{3}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Acoplamiento dinámico: orquestación, coreografía y SBA}{4}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Tolerancia a fallos y consistencia: ACID vs. BASE}{5}{subsection.1.4}%
+\contentsline {section}{\numberline {2}Diseño para Elasticidad Extrema y Consistencia de Datos}{6}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Pregunta}{6}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Contexto del problema}{6}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Justificación de Space-Based Architecture frente a Microservices Architecture}{6}{subsection.2.3}%
+\contentsline {subsubsection}{\numberline {2.3.1}La eliminación del cuello de botella en la base de datos (Escalabilidad)}{7}{subsubsection.2.3.1}%
+\contentsline {subsubsection}{\numberline {2.3.2}Tiempos de respuesta ante la elasticidad (MTTS)}{7}{subsubsection.2.3.2}%
+\contentsline {subsubsection}{\numberline {2.3.3}El alcance del quantum arquitectónico}{7}{subsubsection.2.3.3}%
+\contentsline {subsection}{\numberline {2.4}Mitigación del riesgo de colisiones de datos en asientos numerados}{8}{subsection.2.4}%
+\contentsline {subsubsection}{\numberline {2.4.1}El problema de las colisiones en cachés replicadas}{8}{subsubsection.2.4.1}%
+\contentsline {subsubsection}{\numberline {2.4.2}Estrategias de mitigación y trade-offs}{8}{subsubsection.2.4.2}%
+\contentsline {section}{\numberline {3}Análisis de Fallos y Resiliencia en Arquitecturas Dirigidas por Eventos}{9}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Pregunta}{9}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Impacto del fallo en el flujo general y en la experiencia del usuario}{10}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Impacto en el funcionamiento interno del sistema}{10}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Impacto en la experiencia del usuario final}{11}{subsubsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.3}Solución propuesta: aplicación del Workflow Event Pattern}{11}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}Mecanismo de mitigación y flujo de 6 pasos}{11}{subsubsection.3.3.1}%
+\contentsline {subsubsection}{\numberline {3.3.2}Componentes necesarios en la solución}{12}{subsubsection.3.3.2}%
+\contentsline {subsubsection}{\numberline {3.3.3}Trade-offs y contrapartidas del patrón}{12}{subsubsection.3.3.3}%
+\contentsline {section}{\numberline {4}El Dilema de la Granularidad y el Acoplamiento en Microservicios}{13}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Pregunta}{13}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Error fundamental en el diseño de los servicios}{13}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Nueva estrategia de descomposición}{15}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Ilustración del flujo con código: el patrón Anthology Saga}{16}{subsection.4.4}%
+\contentsline {section}{\numberline {5}Comparación de Atributos de Calidad y Trade-offs}{27}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Pregunta}{27}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Comparación según los tres requisitos}{28}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Despliegue independiente y compromisos de la SBA}{29}{subsection.5.3}%
+\contentsline {section}{\numberline {6}El Legado de SOA y su Influencia en Arquitecturas Modernas}{29}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Pregunta}{29}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}El legado de la SOA y la crítica al motor de orquestación}{30}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Reutilización en Microservicios}{31}{subsection.6.3}%
+\contentsline {subsubsection}{\numberline {6.3.1}Reutilización de lógica de negocio}{32}{subsubsection.6.3.1}%
+\contentsline {subsubsection}{\numberline {6.3.2}Reutilización operativa}{33}{subsubsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.4}¿Cuándo conviene todavía un enfoque de orquestación?}{34}{subsection.6.4}%
+\contentsline {subsection}{\numberline {6.5}Ejemplo de flujo complejo con orquestación explícita}{39}{subsection.6.5}%
+\contentsline {section}{\numberline {7}Bibliografía}{42}{section.7}%
+\contentsline {section}{\numberline {8}Declaración de uso de IA}{43}{section.8}%

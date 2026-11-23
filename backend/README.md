@@ -1,5 +1,9 @@
 # Backend
 
+## Documentación
+
+Al iniciar el servidor, abre [Swagger UI](http://localhost:3000/api-docs) para explorar y probar las rutas, o consulta el [documento OpenAPI](http://localhost:3000/openapi.json) en JSON. Ambos se generan con las rutas y los validadores del backend. La guía de arquitectura y módulos está en [docs/backend.md](docs/backend.md).
+
 ## Arquitectura
 
 Para hacer este proyecto se decidió utilizar la arquitectura limpia siguiendo el marco teórico propuesto por Martin en su libro "Clean Architecture: A Craftsman’s Guide to Software Structure and Design", organizando el código en cuatro círculos concéntricos:
