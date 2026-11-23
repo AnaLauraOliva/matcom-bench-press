@@ -4,7 +4,7 @@ Proyecto de las asignaturas Bases de Datos II e Ingeniería de Software, curso 2
 
 ## Descripción del proyecto
 
-Aplicación web para gestionar la generación automática de planes de entrenamiento en un gimnasio. El sistema cubre la gestión de ejercicios (fuerza, cardio y flexibilidad), grupos musculares, intensidades, programas, entrenadores, clientes y sus inscripciones; la generación, revisión y aprobación de rutinas con observaciones; la asignación de rutinas y el registro de sesiones; el seguimiento del progreso y las solicitudes de ajuste; y la producción de reportes sobre rutinas, ejercicios, intensidades, rendimiento, finalización y abandono, con ordenación y exportación a PDF.
+Aplicación web para gestionar la generación automática de planes de entrenamiento en un gimnasio. El sistema cubre la gestión de ejercicios, programas de entrenamiento, entrenadores, jefes de sala, clientes y sus inscripciones; la generación, revisión y aprobación de rutinas; la asignación de rutinas y el registro de sesiones; el seguimiento del progreso y las solicitudes de ajuste; y la producción de reportes sobre rutinas, ejercicios, rendimiento, finalización y abandono, con ordenación y exportación a PDF.
 
 ## Stack tecnológico
 
@@ -12,7 +12,7 @@ Aplicación web para gestionar la generación automática de planes de entrenami
 | --- | --- | --- |
 | Frontend | React 19 y TypeScript | Interfaz de usuario y tipado de los datos. |
 | Frontend | Vite 8 | Servidor de desarrollo y empaquetado de la aplicación. |
-| Frontend | Tailwind CSS 4 | Estilos responsive con la paleta del proyecto: `#004C4C`, `#00A699`, `#B2D8D8`, `#F5F5F5`, `#FFFFFF`. |
+| Frontend | Tailwind CSS 4 | Estilos |
 | Backend | Node.js 24.21.0, Express 5 y TypeScript | API REST, validación de entradas y reglas de negocio. |
 | ORM | Prisma 7 | Operaciones CRUD, migraciones y datos de ejemplo sobre PostgreSQL. |
 | Base de datos relacional | PostgreSQL 17 | Persistencia de la información del negocio. |
@@ -45,7 +45,7 @@ El valor de `JWT_SECRET` debe tener al menos 32 caracteres. En el frontend tambi
 
 ## Comandos
 
-Ejecuta siempre desde la raíz del repositorio. `start` deja backend y frontend corriendo en segundo plano: los logs quedan en `logs/backend.log` y `logs/frontend.log`, y los PID en `pids/`. Ambas carpetas están ignoradas por Git. `stop` detiene esos procesos y baja el contenedor, pero **conserva la estructura y los datos** de PostgreSQL. No es lo mismo que `reset`; la diferencia se explica en [¿Qué pasa con la base de datos?](#qué-pasa-con-la-base-de-datos).
+Ejecuta siempre desde la raíz del repositorio. `start` deja backend y frontend corriendo en terminales separadas. `stop` detiene esos procesos y baja el contenedor, pero **conserva la estructura y los datos** de PostgreSQL. No es lo mismo que `reset`; la diferencia se explica en [¿Qué pasa con la base de datos?](#qué-pasa-con-la-base-de-datos).
 
 ### Linux (`Makefile`)
 
@@ -53,7 +53,7 @@ Ejecuta siempre desde la raíz del repositorio. `start` deja backend y frontend 
 | --- | --- | --- |
 | `make help` | Muestra la lista de comandos. | Leer esta sección. |
 | `make install` | Instala las dependencias de backend y frontend. | `cd backend && npm install` y `cd frontend && npm install`. El `postinstall` de backend ya genera el cliente de Prisma. |
-| `make start` | Levanta PostgreSQL, backend y frontend. | `docker compose up -d`, `cd backend && npm run dev` y `cd frontend && npm run dev` en tres terminales. |
+| `make start` | Levanta PostgreSQL, backend y frontend. | `docker compose up -d`, `cd backend && npm run dev` y `cd frontend && npm run dev` en dos terminales. |
 | `make stop` | Apaga backend, frontend y PostgreSQL. | Cerrar las dos terminales de desarrollo y ejecutar `docker compose down`. |
 | `make db-migrate` | Aplica las migraciones pendientes de Prisma. | `cd backend && npm run prisma:migrate` (`prisma migrate dev`). Con el historial actual aplica las migraciones existentes sin preguntar; solo pedirá nombre si hay cambios nuevos en `schema.prisma`. |
 | `make db-seed` | Carga en todas las tablas los datos de ejemplo definidos en `backend/prisma/seed.ts`. | `cd backend && npm run prisma:seed`. |
@@ -130,8 +130,9 @@ Servicios tras `start`:
 | API backend | http://localhost:3000 |
 | PostgreSQL | `localhost:5432` (o el puerto configurado en `.env`) |
 
-## Arquitectura y documentación
+## Documentación detallada
 
-- `backend/README.md`: descripción de las capas y de los patrones de diseño utilizados.
-- `Docs/`: informes de diseño de la base de datos e ingeniería de software.
-- `AGENTS.md`: convenciones y reglas de trabajo del repositorio.
+- `docs/Documentación/Documentación Backend.md`: arquitectura del backend, capas, patrones de diseño y comandos útiles.
+- `docs/Documentación/Documentación Frontend.md`: instalación, stack, arquitectura, estructura de carpetas, patrones de diseño y cómo activar/desactivar los mocks.
+- `docs/Documentación/Documentación Base de Datos.md`: esquema de PostgreSQL, entidades, relaciones, migraciones y datos de ejemplo.
+- `Docs/`: informes de diseño de la base de datos e ingeniería de software (documentos académicos).
