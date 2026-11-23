@@ -53,7 +53,7 @@ Ejecuta siempre desde la raíz del repositorio. `start` deja backend y frontend 
 | `make help` | Muestra la lista de comandos. | Leer esta sección. |
 | `make install` | Instala las dependencias de backend y frontend. | `cd backend && npm install` y `cd frontend && npm install`. El `postinstall` de backend ya genera el cliente de Prisma. |
 | `make start` | Levanta PostgreSQL, backend y frontend. | `docker compose up -d`, `cd backend && npm run dev` y `cd frontend && npm run dev` en dos terminales. |
-| `make stop` | Apaga backend, frontend y PostgreSQL. | Cerrar las dos terminales de desarrollo y ejecutar `docker compose down`. |
+| `make stop` | Apaga backend, frontend, PostgreSQL y MongoDB. | Cerrar las dos terminales de desarrollo y ejecutar `docker compose down`. |
 | `make db-migrate` | Aplica las migraciones pendientes de Prisma. | `cd backend && npm run prisma:migrate` (`prisma migrate dev`). Con el historial actual aplica las migraciones existentes sin preguntar; solo pedirá nombre si hay cambios nuevos en `schema.prisma`. |
 | `make db-seed` | Carga en todas las tablas los datos de ejemplo definidos en `backend/prisma/seed.ts`. | `cd backend && npm run prisma:seed`. |
 | `make mongo-seed` | Carga las estructuras de rutina en MongoDB desde `backend/scripts/seed-data/routine-structures.ts`. | `cd backend && npm run mongo:seed`. |
@@ -76,7 +76,7 @@ Los mismos comandos se escriben como argumentos de un único script:
 | `.\dev.ps1 help` | `make help` | Leer esta sección. |
 | `.\dev.ps1 install` | `make install` | `cd backend; npm install` y `cd frontend; npm install`. |
 | `.\dev.ps1 start` | `make start` | `docker compose up -d` y `npm run dev` en backend y frontend en dos terminales. |
-| `.\dev.ps1 stop` | `make stop` | Cerrar las terminales y `docker compose down`. |
+| `.\dev.ps1 stop` | `make stop` | Cerrar las terminales y `docker compose down` (detiene PostgreSQL y MongoDB). |
 | `.\dev.ps1 db-migrate` | `make db-migrate` | `cd backend; npm run prisma:migrate`. |
 | `.\dev.ps1 db-seed` | `make db-seed` | `cd backend; npm run prisma:seed`. |
 | `.\dev.ps1 mongo-seed` | `make mongo-seed` | `cd backend; npm run mongo:seed`. |
@@ -108,21 +108,63 @@ Si `db-seed` o `mongo-seed` fallan a mitad de proceso, puede quedar una BD con t
 
 ### Flujo habitual
 
-La primera vez:
+#### Primera vez que usas el proyecto
+
+Ejecuta estos pasos en orden desde la raíz del repositorio:
+
+1. **Crea los archivos de entorno** a partir de los ejemplos y edítalos con los valores de tu máquina:
+
+   ```bash
+   cp .env.example .env
+   cp backend/.env.example backend/.env
+   cp frontend/.env.example frontend/.env
+   # Edita los tres archivos .env con los valores del entorno
+   ```
+
+   En Windows usa `Copy-Item` en lugar de `cp`.
+
+2. **Instala las dependencias** de backend y frontend:
+
+   ```bash
+   make install      # Windows: .\dev.ps1 install
+   ```
+
+3. **Levanta los servicios** (PostgreSQL, MongoDB, backend y frontend):
+
+   ```bash
+   make start        # Windows: .\dev.ps1 start
+   ```
+
+   Esto abre dos terminales (una para el backend y otra para el frontend) y deja los contenedores de base de datos corriendo en segundo plano.
+
+4. **Aplica las migraciones** para crear las tablas de PostgreSQL:
+
+   ```bash
+   make db-migrate   # Windows: .\dev.ps1 db-migrate
+   ```
+
+5. **Carga los datos de ejemplo** (opcional pero recomendado la primera vez):
+
+   ```bash
+   make db-seed      # Windows: .\dev.ps1 db-seed
+   make mongo-seed   # Windows: .\dev.ps1 mongo-seed
+   ```
+
+   `db-seed` rellena las tablas de PostgreSQL con sedes, usuarios, ejercicios, rutinas, etc. `mongo-seed` carga las estructuras de rutina en MongoDB. Si no los ejecutas, las bases de datos quedarán vacías.
+
+#### Después de la primera vez (día a día)
+
+Ya no necesitas instalar dependencias ni aplicar migraciones salvo que el esquema haya cambiado. Solo usa:
 
 ```bash
-cp .env.example .env
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-# Editar los tres archivos .env con los valores del entorno
-
-make install      # Windows: .\dev.ps1 install
-make start        # Windows: .\dev.ps1 start
-make db-migrate   # Windows: .\dev.ps1 db-migrate
-make db-seed      # Windows: .\dev.ps1 db-seed (opcional)
+make start      # Windows: .\dev.ps1 start   # al empezar a trabajar
+make stop       # Windows: .\dev.ps1 stop    # al terminar
 ```
 
-En el día a día solo hacen falta `make start` al llegar y `make stop` al terminar (en Windows, `.\dev.ps1 start` y `.\dev.ps1 stop`).
+- `start` levanta de nuevo PostgreSQL, MongoDB, backend y frontend. Los datos que ya hayas creado se conservan (los volúmenes de Docker no se borran).
+- `stop` detiene todo pero **conserva los datos** de ambas bases de datos.
+
+Si necesitas partir de cero (borrar todo y volver a cargar los datos de ejemplo desde cero), usa `make reset` (o `.\dev.ps1 reset`), pero ten en cuenta que es **destructivo**: elimina todos los datos creados y los vuelve a cargar desde los seeds.
 
 Servicios tras `start`:
 
@@ -134,6 +176,25 @@ Servicios tras `start`:
 | OpenAPI JSON | http://localhost:3000/openapi.json |
 | PostgreSQL | `localhost:5432` (o el puerto configurado en `.env`) |
 | MongoDB | `localhost:27017` (o el puerto configurado en `MONGO_PORT`) |
+
+### Visualizar las bases de datos
+
+No es necesario instalar ninguna herramienta cliente en tu máquina. Ambas bases de datos corren dentro de contenedores Docker y se pueden inspeccionar con `docker exec`.
+
+| Base de datos | Herramienta | Cómo usarla |
+| --- | --- | --- |
+| PostgreSQL | Prisma Studio | `make db-studio` o `.\dev.ps1 db-studio` |
+| MongoDB | `mongosh` (dentro del contenedor) | `docker exec -it matcom_bench_press_mongo mongosh -u USUARIO -p CONTRASEÑA --authenticationDatabase admin`<br>Sustituye `USUARIO` y `CONTRASEÑA` por los valores de `POSTGRES_USER` y `POSTGRES_PASSWORD` de tu `.env`. Para salir, usa `Ctrl + C`, `.exit` o `quit()`. |
+
+Una vez dentro de `mongosh`:
+
+```js
+show dbs
+use gimnasioDB   # o el nombre de base de datos que hayas configurado
+show collections
+db.rutina_estructura.find()
+```
+
 
 ## Documentación detallada
 

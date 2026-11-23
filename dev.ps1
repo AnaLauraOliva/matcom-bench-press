@@ -1,7 +1,7 @@
 ﻿# Comandos de desarrollo para Windows. Equivale al Makefile en Linux/macOS.
 param(
     [Parameter(Position = 0)]
-    [ValidateSet('help', 'install', 'start', 'stop', 'db-migrate', 'db-seed', 'db-studio', 'check', 'reset')]
+    [ValidateSet('help', 'install', 'start', 'stop', 'db-migrate', 'db-seed', 'mongo-seed', 'db-studio', 'check', 'reset')]
     [string]$Command = 'help'
 )
 
@@ -19,6 +19,13 @@ function Assert-LastExitCode {
 function Assert-Docker {
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
         throw 'Docker no está instalado o no está en el PATH.'
+    }
+    $dockerInfo = & docker info --format '{{.ServerVersion}}' 2>$null
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($dockerInfo)) {
+        throw @"
+El demonio de Docker no está en ejecución.
+Inicia Docker Desktop y espera a que esté listo, luego vuelve a ejecutar el comando.
+"@
     }
 }
 
@@ -136,7 +143,7 @@ function Invoke-Stop {
     } catch {
         Write-Warning 'No se pudo detener Docker Compose (puede que ya esté detenido).'
     }
-    Write-Host 'Servicios detenidos. Los datos de PostgreSQL se conservan.'
+    Write-Host 'Servicios detenidos. Los datos de PostgreSQL y MongoDB se conservan.'
 }
 
 function Invoke-Reset {
@@ -163,7 +170,7 @@ Uso: .\dev.ps1 <comando>
 
   install     Instala dependencias de backend y frontend
   start       Levanta PostgreSQL, backend y frontend
-  stop        Apaga backend, frontend y PostgreSQL
+  stop        Apaga backend, frontend, PostgreSQL y MongoDB
   db-migrate  Aplica migraciones de Prisma
   db-seed      Carga datos de ejemplo
   mongo-seed  Carga estructuras de rutina en MongoDB

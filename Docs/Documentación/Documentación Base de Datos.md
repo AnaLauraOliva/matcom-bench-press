@@ -118,6 +118,26 @@ Desde la raíz del proyecto:
 | `prisma migrate dev` | Aplica migraciones nuevas al esquema. |
 | `prisma db seed` | Vuelve a cargar los datos de ejemplo (solo inserta si la tabla está vacía). |
 
+### Visualizar MongoDB
+
+No es necesario instalar ninguna herramienta cliente en tu máquina. MongoDB corre dentro de un contenedor Docker y se puede inspeccionar con `mongosh` usando `docker exec`:
+
+```powershell
+docker exec -it matcom_bench_press_mongo mongosh -u USUARIO -p CONTRASEÑA --authenticationDatabase admin
+```
+
+Sustituye `USUARIO` y `CONTRASEÑA` por los valores de `POSTGRES_USER` y `POSTGRES_PASSWORD` de tu `.env`. Para salir de `mongosh`, usa `Ctrl + C`, `.exit` o `quit()`.
+
+Una vez dentro:
+
+```js
+show dbs
+use gimnasioDB   # o el nombre de base de datos que hayas configurado
+show collections
+db.rutina_estructura.find()
+```
+
+
 ## Base de datos documental: MongoDB
 
 Además de PostgreSQL, el proyecto utiliza **MongoDB 8.0** para almacenar las estructuras variables de las rutinas. La estructura de una rutina puede cambiar según el entrenador y el objetivo del cliente (bloques simples, circuitos anidados, distintas repeticiones y descansos), por lo que no encaja en un esquema relacional rígido.

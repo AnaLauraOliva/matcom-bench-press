@@ -6,14 +6,14 @@ ROOT := $(CURDIR)
 LOGS := $(ROOT)/logs
 PIDS := $(ROOT)/pids
 
-.PHONY: help install start stop stop-processes check-env check-container db-migrate db-seed db-studio check reset
+.PHONY: help install start stop stop-processes check-env check-container check-docker db-migrate db-seed mongo-seed db-studio check reset
 
 help:
 	@echo "Uso: make <objetivo>"
 	@echo ""
 	@echo "  install        Instala dependencias de backend y frontend"
 	@echo "  start          Levanta PostgreSQL, backend y frontend"
-	@echo "  stop           Apaga backend, frontend y PostgreSQL"
+	@echo "  stop           Apaga backend, frontend, PostgreSQL y MongoDB"
 	@echo "  db-migrate     Aplica migraciones de Prisma"
 	@echo "  db-seed        Carga datos de ejemplo"
 	@echo "  mongo-seed     Carga estructuras de rutina en MongoDB"
@@ -41,6 +41,13 @@ stop-processes:
 		fi; \
 	done
 
+check-docker:
+	@if ! docker info >/dev/null 2>&1; then \
+		echo "ERROR: El demonio de Docker no está en ejecución."; \
+		echo "Inicia Docker Desktop y espera a que esté listo, luego vuelve a ejecutar el comando."; \
+		exit 1; \
+	fi
+
 check-container:
 	@if labels=$$(docker inspect matcom_bench_press_postgres --format '{{json .Config.Labels}}' 2>/dev/null); then \
 		config=$$(printf '%s' "$$labels" | sed -n 's/.*"com.docker.compose.project.config_files":"\([^"]*\)".*/\1/p'); \
@@ -53,7 +60,7 @@ check-container:
 		fi; \
 	fi
 
-start: check-env stop-processes check-container
+start: check-env stop-processes check-docker check-container
 	@docker compose up -d --wait
 	@mkdir -p "$(LOGS)" "$(PIDS)"
 	@if command -v gnome-terminal >/dev/null 2>&1; then \
@@ -71,7 +78,7 @@ start: check-env stop-processes check-container
 
 stop: stop-processes
 	-@docker compose down || true
-	@echo "Servicios detenidos. Los datos de PostgreSQL se conservan."
+	@echo "Servicios detenidos. Los datos de PostgreSQL y MongoDB se conservan."
 
 db-migrate:
 	cd backend && npm run prisma:migrate
