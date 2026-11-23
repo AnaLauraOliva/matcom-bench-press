@@ -1,9 +1,9 @@
-import { EmailAlreadyExistsError, PhoneAlreadyExistsError } from "../../application/errors/application-errors.js";
+import { EmailAlreadyExistsError, PhoneAlreadyExistsError } from "../../../application/errors/application-errors.js";
 import type {
     NewUserRecord,
     IUserDataSource,
     IUserRecord,
-} from "../../interfaces/data-sources/user-data-source.js";
+} from "../../../interfaces/data-sources/user-data-source.js";
 import type { PrismaClient } from "./prisma-client.js";
 
 const INCLUDE_ROLE_TABLES = {

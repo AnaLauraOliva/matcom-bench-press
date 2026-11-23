@@ -16,6 +16,17 @@ services:
             timeout: 5s
             retries: 5
         restart: unless-stopped
-
+    mongo:
+        image: mongo:8.0
+        container_name: matcom_bench_press_mongo
+        restart: unless-stopped
+        ports:
+            - "${MONGO_PORT}:27017"
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: ${POSTGRES_USER}
+            MONGO_INITDB_ROOT_PASSWORD: ${POSTGRES_PASSWORD}
+        volumes:
+            - mongo-data:/data/db
 volumes:
     postgres_data:
+    mongo-data:
